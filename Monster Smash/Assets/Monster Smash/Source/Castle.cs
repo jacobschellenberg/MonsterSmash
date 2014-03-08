@@ -20,14 +20,17 @@ public class Castle : MonoBehaviour {
 	void Start(){
 		initialLife = LifePoints.Count;
 		health = LifePoints.Count;
+
+		foreach(GameObject explosion in endExplosions)
+			explosion.SetActive(false);
 	}
 
 	void Update(){
 		if(isHit){
 			timer += Time.deltaTime;
-			hitFlash.renderer.enabled = true;
+			hitFlash.SetActive(true);
 			if(timer > hitFlashTimer){
-				hitFlash.renderer.enabled = false;
+				hitFlash.SetActive(false);
 				timer = 0;
 				isHit = false;
 			}
@@ -37,7 +40,7 @@ public class Castle : MonoBehaviour {
 	public void OnTriggerEnter(Collider trigger){
 	
 		if(trigger.gameObject.CompareTag("Monster")){
-			endExplosions[Random.Range(0,endExplosions.Count)].renderer.enabled = true;
+			endExplosions[Random.Range(0,endExplosions.Count)].SetActive(true);
 
 			health--;
 
@@ -48,7 +51,7 @@ public class Castle : MonoBehaviour {
 			Destroy (trigger.gameObject);
 			
 			if(health < 1){
-				gameController.GetComponent<GameController>().GameOver();	
+				gameController.GetComponent<GameViewController>().GameOver();	
 			}
 		}
 		if(trigger.gameObject.CompareTag("Civilian")){
@@ -60,11 +63,11 @@ public class Castle : MonoBehaviour {
 		}
 
 		foreach(var lifePoint in LifePoints){
-			lifePoint.GetComponentInChildren<Renderer>().material.mainTexture = LifeTexture;
+			lifePoint.GetComponentInChildren<UITexture>().mainTexture = LifeTexture;
 		}
 
 		foreach(var missingLifePoint in MissingLifePoints){
-			missingLifePoint.GetComponentInChildren<Renderer>().material.mainTexture = MissingLifeTexture;
+			missingLifePoint.GetComponentInChildren<UITexture>().mainTexture = MissingLifeTexture;
 		}
 	}
 }

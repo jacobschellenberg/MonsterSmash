@@ -9,8 +9,8 @@ public class Monster : MonoBehaviour {
 	public GameObject GameControllerObject;
 	public int HitPoints = 3;
 	public int MonsterType;
-	public float MovementSpeed = 3;
 
+	float MovementSpeed = 0.5f;
 	bool frozen = false;
 	float originalSpeed;
 	float frozenTimer = 2;
@@ -18,14 +18,14 @@ public class Monster : MonoBehaviour {
 	float currentRotation = 0;
 	float displayDeadTextureTime = 1;
 	bool toggleDirection = false; //true = right; false = left;
-	float sideMovementSpeed = 7;
+	float sideMovementSpeed = 0.5f;
 	float originalSideMovementSpeed;
 	bool dodge = true;
 	
 	public bool IsDead{get;set;}
 	
 	void Awake(){
-		GameControllerObject = GameObject.FindGameObjectWithTag("GameController");
+		GameControllerObject = GameObject.FindObjectOfType<GameViewController>().gameObject; //GameObject.FindGameObjectWithTag("GameController");
 		originalSpeed = MovementSpeed;
 		originalSideMovementSpeed = sideMovementSpeed;
 	}
@@ -64,7 +64,6 @@ public class Monster : MonoBehaviour {
 	}
 
 	void SelectAI(int monsterType){
-		Debug.Log(monsterType);
 		switch(monsterType){
 		case 0: //Red - 3 Hits
 			HitPoints = 3;
@@ -80,12 +79,12 @@ public class Monster : MonoBehaviour {
 			break;
 		case 4: //DarkGreen - fast
 			HitPoints = 1;
-			MovementSpeed = 6;
+			MovementSpeed = 0.7f;
 			break;
 		case 5: //Hulk Thing - 10 Hits
 			GetComponentInChildren<Transform>().localScale = new Vector3(3,3, 1);
 			HitPoints = 25;
-			MovementSpeed = 2.5f;
+			MovementSpeed = 0.2f;
 			break;
 		}
 	}
@@ -122,14 +121,14 @@ public class Monster : MonoBehaviour {
 	}
 
 	void ZigZag(){
-		var width = 4.5F;
+		var width = 655F;
 		var random = Random.Range(0.0F, 1.0F);
 
 		if(random < 0.01F){
 			toggleDirection = !toggleDirection;
 		}
 
-		if(transform.position.x >= width || transform.position.x <= -width){
+		if(transform.localPosition.x >= width || transform.localPosition.x <= -width){
 			toggleDirection = !toggleDirection;
 		}
 
@@ -142,7 +141,7 @@ public class Monster : MonoBehaviour {
 	}
 
 	void Dodge(){
-		transform.position = new Vector3(transform.position.x, transform.position.y + 5, transform.position.z);
+		transform.position = new Vector3(transform.position.x, transform.position.y + 1, transform.position.z);
 		dodge = false;
 	}
 
@@ -176,12 +175,12 @@ public class Monster : MonoBehaviour {
 			MonsterType = 1;
 		}
 
-		GetComponentInChildren<Renderer>().material.mainTexture = GameControllerObject.GetComponent<GameController>().AliveMonsterTextures[MonsterType];
+		GetComponentInChildren<UITexture>().mainTexture = GameControllerObject.GetComponent<GameViewController>().AliveMonsterTextures[MonsterType];
 	}
 	
 	public void ChooseDeadTexture(){
-		int random = Random.Range(0, GameControllerObject.GetComponent<GameController>().DeadMonsterTextures.Count);
-		GetComponentInChildren<Renderer>().material.mainTexture = GameControllerObject.GetComponent<GameController>().DeadMonsterTextures[random];
+		int random = Random.Range(0, GameControllerObject.GetComponent<GameViewController>().DeadMonsterTextures.Count);
+		GetComponentInChildren<UITexture>().mainTexture = GameControllerObject.GetComponent<GameViewController>().DeadMonsterTextures[random];
 	}
 	
 	public void Hit(int damage){
@@ -194,7 +193,7 @@ public class Monster : MonoBehaviour {
 		}	
 
 		if(MonsterType == 5){
-			transform.Translate(Vector3.up * 30 * Time.deltaTime);
+			transform.Translate(Vector3.up * 2 * Time.deltaTime);
 		}
 		
 		if(HitPoints <= 0){

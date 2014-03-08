@@ -3,10 +3,9 @@ using System.Collections.Generic;
 
 public class Civilian : MonoBehaviour {
 	
-	public float speed = 4;
+	float speed = 0.3f;
 	public List<Texture2D> agentTextures = new List<Texture2D>();
-	
-	
+
 	// Update is called once per frame
 	
 	void Start(){
@@ -19,6 +18,6 @@ public class Civilian : MonoBehaviour {
 	}
 	
 	public void ChooseTexture(){
-		GetComponentInChildren<Renderer>().material.mainTexture = agentTextures[Random.Range(0,agentTextures.Count)];
+		GetComponentInChildren<UITexture>().mainTexture = agentTextures[Random.Range(0,agentTextures.Count)];
 	}
 }

@@ -1,13 +1,9 @@
-using UnityEngine;
-using System.Linq.Expressions;
-using System.Linq;
+﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
-public class GameController : MonoBehaviour {
-	
-	public delegate void GenerateMonster(string monsterName, int hitPoints, int monsterType, int monsterAI);
-	
+public class GameViewController : MonoBehaviour {
+
 	public GameObject monsterPrefab;
 	public GameObject spawnPoint;
 	public GameObject civilianPrefab;
@@ -19,8 +15,8 @@ public class GameController : MonoBehaviour {
 	public int DestroyAllBonus = 100;
 	public float monsterSpawnTimer = 3F;
 	public int monstersSmashed = 0;
-	public TextMesh monstersKilledText;
-	public TextMesh highScoreText;
+	public UILabel monstersKilledText;
+	public UILabel highScoreText;
 	
 	public GameObject castle;
 	
@@ -38,13 +34,14 @@ public class GameController : MonoBehaviour {
 	private int bonusValue;
 	private List<GameObject> monsterList = new List<GameObject>();
 	private Vector3 currentMouseClickPosition;
-	
+
+
 	void Start(){
 		if(PlayerPrefs.GetInt("HighScore") != 0){
 			highScoreText.text = string.Format("High Score: {0}", PlayerPrefs.GetInt("HighScore"));
 		}
 	}
-
+	
 	void Update(){
 		MouseToScreenDetection();
 		GameActive();
@@ -61,11 +58,11 @@ public class GameController : MonoBehaviour {
 		RaycastHit hit;
 		
 		if(Input.GetButtonDown("Fire1")){
-	    	if (Physics.Raycast(ray, out hit, Mathf.Infinity)){
-				currentMouseClickPosition = ray.origin;
+			if (Physics.Raycast(ray, out hit, Mathf.Infinity)){
+				currentMouseClickPosition = hit.transform.localPosition;
 				
 				if(hit.collider.CompareTag("Monster")){
-					ChooseHitPowTexture(ray.origin);
+					ChooseHitPowTexture(currentMouseClickPosition);
 					DestroyMonster(hit.collider.gameObject);
 				}
 				else if(hit.collider.CompareTag("FreezeAll")){
@@ -79,10 +76,7 @@ public class GameController : MonoBehaviour {
 				else if(hit.collider.CompareTag("Civilian")){
 					Civilian();
 					Destroy (hit.collider.gameObject);
-					ChooseFriendlyFirePowTexture(ray.origin);
-				}
-				else{
-					ChoosePowTexture(currentMouseClickPosition);
+					ChooseFriendlyFirePowTexture(currentMouseClickPosition);
 				}
 			}
 		}
@@ -92,7 +86,7 @@ public class GameController : MonoBehaviour {
 	void DestroyMonster(GameObject monster){
 		if(!monster.GetComponent<Monster>().IsDead){
 			monster.GetComponent<Monster>().Hit(TapDamage);
-		
+			
 			if(monster.GetComponent<Monster>().MonsterType == previousSmash){
 				bonusValue++;
 				BonusPow(currentMouseClickPosition);
@@ -104,31 +98,28 @@ public class GameController : MonoBehaviour {
 			monstersSmashed += bonusValue;
 			
 			previousSmash = monster.GetComponent<Monster>().MonsterType;
-			//Debug.Log ("Previous Type: " + previousSmash + " | Bonus Value: " + bonusValue);
-		}
-		else{
-			//Debug.Log("Monster is already dead...");
 		}
 	}
 	
 	void GameActive(){
 		monstersKilledText.text = string.Format("Points: {0}", monstersSmashed);
-
+		
 		timer += 1 * Time.deltaTime;
 		
 		if(timer > monsterSpawnTimer){
-			monsterList.Add(Instantiate(monsterPrefab, new Vector3(spawnPoint.transform.position.x + Random.Range(-maxPosX,maxPosX), spawnPoint.transform.position.y + Random.Range(-maxPosY,maxPosY),0), Quaternion.identity) as GameObject);
-			
+			var newMonster = NGUITools.AddChild(this.gameObject, monsterPrefab);
+			newMonster.transform.localPosition = new Vector3(spawnPoint.transform.localPosition.x + Random.Range(-maxPosX,maxPosX), spawnPoint.transform.localPosition.y + Random.Range(-maxPosY,maxPosY),0);
+			monsterList.Add(newMonster);
 			var selectBuff = Random.Range (0,100);
 			
 			if(selectBuff < 1){
-				GameObject.Instantiate(destroyAll, new Vector3(spawnPoint.transform.position.x, spawnPoint.transform.position.y,0), Quaternion.identity);
+				GameObject.Instantiate(destroyAll, new Vector3(spawnPoint.transform.localPosition.x, spawnPoint.transform.localPosition.y,0), Quaternion.identity);
 			}
 			else if(selectBuff < 5){
-				GameObject.Instantiate(freezeAll, new Vector3(spawnPoint.transform.position.x , spawnPoint.transform.position.y,0), Quaternion.identity);
+				GameObject.Instantiate(freezeAll, new Vector3(spawnPoint.transform.localPosition.x , spawnPoint.transform.localPosition.y,0), Quaternion.identity);
 			}
 			else if(selectBuff < 10){
-				GameObject.Instantiate(civilianPrefab, new Vector3(spawnPoint.transform.position.x + Random.Range(-maxPosX,maxPosX), spawnPoint.transform.position.y + Random.Range(-maxPosY,maxPosY),0), Quaternion.identity);
+				GameObject.Instantiate(civilianPrefab, new Vector3(spawnPoint.transform.localPosition.x + Random.Range(-maxPosX,maxPosX), spawnPoint.transform.localPosition.y + Random.Range(-maxPosY,maxPosY),0), Quaternion.identity);
 			}
 			
 			timer = 0;
@@ -138,31 +129,26 @@ public class GameController : MonoBehaviour {
 	}
 	
 	public void ChooseFriendlyFirePowTexture(Vector3 position){
-		GameObject newPow = (GameObject)Instantiate(powPrefab, new Vector3(position.x, position.y, -1), Quaternion.identity);
-		newPow.GetComponentInChildren<Renderer>().material.mainTexture = friendlyFirePow;
-		Destroy(newPow, 0.2F);
-	}
-	
-	public void ChoosePowTexture(Vector3 position){
-		int random = Random.Range (0,powTextures.Count);
-		GameObject newPow = (GameObject)Instantiate(powPrefab, new Vector3(position.x, position.y, -1), Quaternion.identity);
-		newPow.GetComponentInChildren<Renderer>().material.mainTexture = powTextures[random];
+		GameObject newPow = (GameObject)Instantiate(powPrefab, new Vector3(position.x, position.y, 0), Quaternion.identity);
+		newPow.GetComponentInChildren<UITexture>().mainTexture = friendlyFirePow;
 		Destroy(newPow, 0.2F);
 	}
 	
 	public void ChooseHitPowTexture(Vector3 position){
 		int random = Random.Range (0,hitPowTextures.Count);
-		GameObject newPow = (GameObject)Instantiate(powPrefab, new Vector3(position.x, position.y, -1), Quaternion.identity);
-		newPow.GetComponentInChildren<Renderer>().material.mainTexture = hitPowTextures[random];
+		GameObject newPow = NGUITools.AddChild(this.gameObject, powPrefab);
+		newPow.transform.localPosition = position;
+		newPow.GetComponentInChildren<UITexture>().mainTexture = hitPowTextures[random];
 		Destroy(newPow, 0.2F);
 	}
 	
 	public void BonusPow(Vector3 position){
-		float[] random = {1, -1};
+		float[] random = {100.0f, -100.0f};
 		int selectRandom = Random.Range(0, random.Length);
-		
-		GameObject newPow = (GameObject)Instantiate(powPrefab, new Vector3(position.x + random[selectRandom], position.y + random[selectRandom], -1), Quaternion.identity);
-		newPow.GetComponentInChildren<Renderer>().material.mainTexture = bonusPow;
+
+		GameObject newPow = NGUITools.AddChild(this.gameObject, powPrefab);
+		newPow.transform.localPosition = new Vector3(position.x + random[selectRandom], position.y + random[selectRandom], 0);
+		newPow.GetComponentInChildren<UITexture>().mainTexture = bonusPow;
 		Destroy(newPow, 0.3F);
 	}
 	
