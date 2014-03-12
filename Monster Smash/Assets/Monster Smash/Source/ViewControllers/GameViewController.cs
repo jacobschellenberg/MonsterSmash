@@ -1,41 +1,32 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
+//TODO: Split class into GameController and GameViewController
 public class GameViewController : MonoBehaviour {
 
 	public GameObject monsterPrefab;
 	public GameObject spawnPoint;
-	public GameObject civilianPrefab;
-	public GameObject freezeAll;
-	public GameObject destroyAll;
+	public GameObject agentPrefab;
+	public GameObject powPrefab;
+	public GameObject freezeAllPrefab;
+	public GameObject destroyAllPrefab;
 	public float maxPosX;
 	public float maxPosY;
 	public int TapDamage = 1;
-	public int DestroyAllBonus = 100;
+	public int destroyAllBonus = 100;
 	public float monsterSpawnTimer = 3F;
 	public int monstersSmashed = 0;
 	public UILabel monstersKilledText;
 	public UILabel highScoreText;
-	
 	public GameObject castle;
-	
-	public GameObject powPrefab;
-	public List<Texture2D> powTextures = new List<Texture2D>();
-	public List<Texture2D> hitPowTextures = new List<Texture2D>();
-	public Texture2D bonusPow;
-	public Texture2D friendlyFirePow;
-	
-	public List<Texture2D> AliveMonsterTextures = new List<Texture2D>();
-	public List<Texture2D> DeadMonsterTextures = new List<Texture2D>();  
 	
 	private float timer;
 	private int previousSmash;
 	private int bonusValue;
 	private List<GameObject> monsterList = new List<GameObject>();
 	private Vector3 currentMouseClickPosition;
-
-
+	
 	void Start(){
 		if(PlayerPrefs.GetInt("HighScore") != 0){
 			highScoreText.text = string.Format("High Score: {0}", PlayerPrefs.GetInt("HighScore"));
@@ -62,21 +53,21 @@ public class GameViewController : MonoBehaviour {
 				currentMouseClickPosition = hit.transform.localPosition;
 				
 				if(hit.collider.CompareTag("Monster")){
-					ChooseHitPowTexture(currentMouseClickPosition);
+					ShowHitPow(currentMouseClickPosition);
 					DestroyMonster(hit.collider.gameObject);
 				}
 				else if(hit.collider.CompareTag("FreezeAll")){
-					FreezeAll();
+					FreezeAllMonsters();
 					Destroy (hit.collider.gameObject);
 				}
 				else if(hit.collider.CompareTag("DestroyAll")){
-					DestroyAll();
+					DestroyAllMonsters();
 					Destroy (hit.collider.gameObject);
 				}		
 				else if(hit.collider.CompareTag("Civilian")){
-					Civilian();
+					CivilianHit();
 					Destroy (hit.collider.gameObject);
-					ChooseFriendlyFirePowTexture(currentMouseClickPosition);
+					ShowFriendlyHitPow(currentMouseClickPosition);
 				}
 			}
 		}
@@ -84,12 +75,12 @@ public class GameViewController : MonoBehaviour {
 	
 	//Deactivate and Requeue Monster
 	void DestroyMonster(GameObject monster){
-		if(!monster.GetComponent<Monster>().IsDead){
+		if(!monster.GetComponent<Monster>().isAlive){
 			monster.GetComponent<Monster>().Hit(TapDamage);
 			
 			if(monster.GetComponent<Monster>().MonsterType == previousSmash){
 				bonusValue++;
-				BonusPow(currentMouseClickPosition);
+				ShowBonusPow(currentMouseClickPosition);
 			}
 			else{
 				bonusValue = 1;
@@ -113,13 +104,13 @@ public class GameViewController : MonoBehaviour {
 			var selectBuff = Random.Range (0,100);
 			
 			if(selectBuff < 1){
-				GameObject.Instantiate(destroyAll, new Vector3(spawnPoint.transform.localPosition.x, spawnPoint.transform.localPosition.y,0), Quaternion.identity);
+				GameObject.Instantiate(destroyAllPrefab, new Vector3(spawnPoint.transform.localPosition.x, spawnPoint.transform.localPosition.y,0), Quaternion.identity);
 			}
 			else if(selectBuff < 5){
-				GameObject.Instantiate(freezeAll, new Vector3(spawnPoint.transform.localPosition.x , spawnPoint.transform.localPosition.y,0), Quaternion.identity);
+				GameObject.Instantiate(freezeAllPrefab, new Vector3(spawnPoint.transform.localPosition.x , spawnPoint.transform.localPosition.y,0), Quaternion.identity);
 			}
 			else if(selectBuff < 10){
-				GameObject.Instantiate(civilianPrefab, new Vector3(spawnPoint.transform.localPosition.x + Random.Range(-maxPosX,maxPosX), spawnPoint.transform.localPosition.y + Random.Range(-maxPosY,maxPosY),0), Quaternion.identity);
+				GameObject.Instantiate(agentPrefab, new Vector3(spawnPoint.transform.localPosition.x + Random.Range(-maxPosX,maxPosX), spawnPoint.transform.localPosition.y + Random.Range(-maxPosY,maxPosY),0), Quaternion.identity);
 			}
 			
 			timer = 0;
@@ -128,27 +119,26 @@ public class GameViewController : MonoBehaviour {
 		ScoreKeeper();
 	}
 	
-	public void ChooseFriendlyFirePowTexture(Vector3 position){
+	public void ShowFriendlyHitPow(Vector3 position){
 		GameObject newPow = (GameObject)Instantiate(powPrefab, new Vector3(position.x, position.y, 0), Quaternion.identity);
-		newPow.GetComponentInChildren<UITexture>().mainTexture = friendlyFirePow;
+		newPow.GetComponentInChildren<UITexture>().mainTexture = TextureManager.GetRandomTexture(TextureType.FriendlyHitPows);
 		Destroy(newPow, 0.2F);
 	}
 	
-	public void ChooseHitPowTexture(Vector3 position){
-		int random = Random.Range (0,hitPowTextures.Count);
+	public void ShowHitPow(Vector3 position){
 		GameObject newPow = NGUITools.AddChild(this.gameObject, powPrefab);
 		newPow.transform.localPosition = position;
-		newPow.GetComponentInChildren<UITexture>().mainTexture = hitPowTextures[random];
+		newPow.GetComponentInChildren<UITexture>().mainTexture = TextureManager.GetRandomTexture(TextureType.HitPows);
 		Destroy(newPow, 0.2F);
 	}
 	
-	public void BonusPow(Vector3 position){
+	public void ShowBonusPow(Vector3 position){
 		float[] random = {100.0f, -100.0f};
 		int selectRandom = Random.Range(0, random.Length);
 
 		GameObject newPow = NGUITools.AddChild(this.gameObject, powPrefab);
 		newPow.transform.localPosition = new Vector3(position.x + random[selectRandom], position.y + random[selectRandom], 0);
-		newPow.GetComponentInChildren<UITexture>().mainTexture = bonusPow;
+		newPow.GetComponentInChildren<UITexture>().mainTexture = TextureManager.GetRandomTexture(TextureType.BonusPows);
 		Destroy(newPow, 0.3F);
 	}
 	
@@ -160,26 +150,25 @@ public class GameViewController : MonoBehaviour {
 		Application.LoadLevel("GameOver");
 	}
 	
-	void DestroyAll(){
+	void DestroyAllMonsters(){
 		GameObject[] monsters = GameObject.FindGameObjectsWithTag("Monster");
 		
 		foreach(var monster in monsters){
-			monstersSmashed += DestroyAllBonus;
+			monstersSmashed += destroyAllBonus;
 			monster.GetComponent<Monster>().Dead();
 			monsterList.Remove(monster);
 		}
 	}
 	
-	void FreezeAll(){
+	void FreezeAllMonsters(){
 		GameObject[] monsters = GameObject.FindGameObjectsWithTag("Monster");
 		
 		foreach(var monster in monsters){
 			monster.GetComponent<Monster>().Freeze();
 		}
 	}
-	
-	void Civilian(){
+
+	void CivilianHit(){
 		monstersSmashed--;
-		Debug.Log ("Hit Civilian");
 	}
 }
