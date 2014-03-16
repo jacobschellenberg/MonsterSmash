@@ -51,7 +51,7 @@ public class Castle : MonoBehaviour {
 			Destroy (trigger.gameObject);
 			
 			if(health < 1){
-				gameController.GetComponent<GameViewController>().GameOver();	
+				gameController.GetComponent<GameController>().GameOver();	
 			}
 		}
 		if(trigger.gameObject.CompareTag("Civilian")){
