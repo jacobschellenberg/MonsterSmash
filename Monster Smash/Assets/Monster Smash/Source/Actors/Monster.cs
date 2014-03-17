@@ -2,13 +2,11 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
-public class Monster : Actor {
-	
-	public GameObject GameControllerObject;
+public class Monster : MonsterBase {
+
 	public int MonsterType{ get; set; }
 
 	void Awake(){
-		GameControllerObject = GameObject.FindObjectOfType<GameViewController>().gameObject;
 		originalSpeed = movementSpeed;
 		originalSideMovementSpeed = sideMovementSpeed;
 	}

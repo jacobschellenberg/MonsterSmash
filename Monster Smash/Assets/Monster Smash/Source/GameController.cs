@@ -24,7 +24,7 @@ public class GameController : MonoBehaviour {
 	public int MonstersSmashed{get; set;}
 	
 	private float timer;
-	private int previousSmash;
+	private GameObject previousHit;
 	private int bonusValue;
 	private List<GameObject> monsterList = new List<GameObject>();
 	private Vector3 currentMouseClickPosition;
@@ -37,44 +37,33 @@ public class GameController : MonoBehaviour {
 	public void MouseToScreenDetection(){
 		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 		RaycastHit hit;
-		
+	
 		if(Input.GetButtonDown("Fire1")){
 			if (Physics.Raycast(ray, out hit, Mathf.Infinity)){
 				currentMouseClickPosition = hit.transform.localPosition;
-				
-				if(hit.collider.CompareTag("Monster")){
-					ShowHitPow(currentMouseClickPosition);
-					DestroyMonster(hit.collider.gameObject);
+
+
+				// TODO: is currently giving bonus if hit same monster.
+				// Should be giving bonus if same monster type is hit.
+				if(previousHit != null && previousHit == hit.transform.gameObject){
+					bonusValue++;
+					ShowBonusPow(currentMouseClickPosition);
 				}
-				else if(hit.collider.CompareTag("DestroyAll")){
+				else
+					bonusValue = 1;
+				
+				MonstersSmashed += bonusValue;
+				previousHit = hit.transform.gameObject;
+
+				if(hit.collider.CompareTag("Monster"))
+					ShowHitPow(currentMouseClickPosition);
+				else if(hit.collider.CompareTag("DestroyAll"))
 					MonstersSmashed += destroyAllBonus;
-					monsterList.Remove(hit.collider.gameObject);
-				}		
 				else if(hit.collider.CompareTag("Civilian")){
 					CivilianHit();
-					Destroy (hit.collider.gameObject);
 					ShowFriendlyHitPow(currentMouseClickPosition);
 				}
 			}
-		}
-	}
-	
-	//Deactivate and Requeue Monster
-	void DestroyMonster(GameObject monster){
-		if(!monster.GetComponent<Monster>().isAlive){
-			monster.GetComponent<Monster>().Hit(TapDamage);
-			
-			if(monster.GetComponent<Monster>().MonsterType == previousSmash){
-				bonusValue++;
-				ShowBonusPow(currentMouseClickPosition);
-			}
-			else{
-				bonusValue = 1;
-			}
-			
-			MonstersSmashed += bonusValue;
-			
-			previousSmash = monster.GetComponent<Monster>().MonsterType;
 		}
 	}
 	
@@ -86,8 +75,7 @@ public class GameController : MonoBehaviour {
 			newMonster.transform.localPosition = new Vector3(spawnPoint.transform.localPosition.x + Random.Range(-maxPosX,maxPosX), spawnPoint.transform.localPosition.y + Random.Range(-maxPosY,maxPosY),0);
 			monsterList.Add(newMonster);
 
-//			var selectBuff = Random.Range (0,10);
-			var selectBuff = 4;
+			var selectBuff = Random.Range (0.0f,100.0f);
 			if(selectBuff < 1)
 				NGUITools.AddChild(this.gameObject, destroyAllPrefab);
 			else if(selectBuff < 5)

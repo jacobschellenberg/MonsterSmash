@@ -32,7 +32,6 @@ public class FreezeAll : PowerUpBase {
 			}
 		}
 
-		
 		Destroy(this.gameObject);
 	}
 }

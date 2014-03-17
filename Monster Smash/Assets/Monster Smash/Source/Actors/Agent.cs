@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class Agent : Actor {
+public class Agent : MonsterBase {
 
 	public override void SetAliveTexture(){
 		GetComponentInChildren<UITexture>().mainTexture = TextureManager.GetRandomTexture(TextureType.Agents);
