@@ -46,13 +46,9 @@ public class GameController : MonoBehaviour {
 					ShowHitPow(currentMouseClickPosition);
 					DestroyMonster(hit.collider.gameObject);
 				}
-				else if(hit.collider.CompareTag("FreezeAll")){
-					FreezeAllMonsters();
-					Destroy (hit.collider.gameObject);
-				}
 				else if(hit.collider.CompareTag("DestroyAll")){
-					DestroyAllMonsters();
-					Destroy (hit.collider.gameObject);
+					MonstersSmashed += destroyAllBonus;
+					monsterList.Remove(hit.collider.gameObject);
 				}		
 				else if(hit.collider.CompareTag("Civilian")){
 					CivilianHit();
@@ -89,17 +85,15 @@ public class GameController : MonoBehaviour {
 			var newMonster = NGUITools.AddChild(this.gameObject, monsterPrefab);
 			newMonster.transform.localPosition = new Vector3(spawnPoint.transform.localPosition.x + Random.Range(-maxPosX,maxPosX), spawnPoint.transform.localPosition.y + Random.Range(-maxPosY,maxPosY),0);
 			monsterList.Add(newMonster);
-			var selectBuff = Random.Range (0,100);
-			
-			if(selectBuff < 1){
-				GameObject.Instantiate(destroyAllPrefab, new Vector3(spawnPoint.transform.localPosition.x, spawnPoint.transform.localPosition.y,0), Quaternion.identity);
-			}
-			else if(selectBuff < 5){
-				GameObject.Instantiate(freezeAllPrefab, new Vector3(spawnPoint.transform.localPosition.x , spawnPoint.transform.localPosition.y,0), Quaternion.identity);
-			}
-			else if(selectBuff < 10){
+
+//			var selectBuff = Random.Range (0,10);
+			var selectBuff = 4;
+			if(selectBuff < 1)
+				NGUITools.AddChild(this.gameObject, destroyAllPrefab);
+			else if(selectBuff < 5)
+				NGUITools.AddChild(this.gameObject, freezeAllPrefab);
+			else if(selectBuff < 10)
 				GameObject.Instantiate(agentPrefab, new Vector3(spawnPoint.transform.localPosition.x + Random.Range(-maxPosX,maxPosX), spawnPoint.transform.localPosition.y + Random.Range(-maxPosY,maxPosY),0), Quaternion.identity);
-			}
 			
 			timer = 0;
 		}
@@ -134,24 +128,6 @@ public class GameController : MonoBehaviour {
 		}
 		PlayerPrefs.SetInt("CurrentScore", MonstersSmashed);
 		Application.LoadLevel("GameOver");
-	}
-	
-	void DestroyAllMonsters(){
-		GameObject[] monsters = GameObject.FindGameObjectsWithTag("Monster");
-		
-		foreach(var monster in monsters){
-			MonstersSmashed += destroyAllBonus;
-			monster.GetComponent<Monster>().Dead();
-			monsterList.Remove(monster);
-		}
-	}
-	
-	void FreezeAllMonsters(){
-		GameObject[] monsters = GameObject.FindGameObjectsWithTag("Monster");
-		
-		foreach(var monster in monsters){
-			monster.GetComponent<Monster>().Freeze();
-		}
 	}
 	
 	void CivilianHit(){

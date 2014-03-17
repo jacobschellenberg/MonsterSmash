@@ -149,8 +149,4 @@ public class Monster : Actor {
 			Dead ();
 		}
 	}
-	
-	public void Freeze(){
-		isFrozen = true;
-	}
 }

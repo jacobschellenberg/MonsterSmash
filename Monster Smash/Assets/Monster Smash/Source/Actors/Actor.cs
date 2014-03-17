@@ -10,11 +10,9 @@ public abstract class Actor : MonoBehaviour {
 	public float sideMovementSpeed = 0.5f;
 	public float originalSideMovementSpeed;
 	public bool isAlive;
-	public bool isFrozen;
 
-	public float frozenTimer = 2;
-	public float currentFrozenTimer = 0;
-	public float currentRotation = 0;
+
+
 	public float displayDeadTextureTime = 1;
 	public bool toggleDirection = false; //true = right; false = left;
 	public bool dodge = true;
@@ -30,29 +28,8 @@ public abstract class Actor : MonoBehaviour {
 	}
 
 	void Update(){
-		if(!isAlive){
+		if(!isAlive)
 			Movement();
-			
-			if(isFrozen){
-				movementSpeed = 0;
-				sideMovementSpeed = 0;
-				
-				currentFrozenTimer += 1 * Time.deltaTime;
-				
-				currentRotation += currentRotation < 360 ? 10 * Time.deltaTime : 0;
-				transform.Rotate(0,0,currentRotation);
-				
-				if(currentFrozenTimer > frozenTimer){
-					if(!isAlive){
-						movementSpeed = originalSpeed;
-						sideMovementSpeed = originalSideMovementSpeed;
-					}
-					currentFrozenTimer = 0;
-					transform.rotation = Quaternion.identity;
-					isFrozen = false;
-				}
-			}
-		}
 	}
 
 	public virtual void Alive(){
