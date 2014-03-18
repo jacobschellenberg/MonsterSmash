@@ -24,7 +24,7 @@ public class GameController : MonoBehaviour {
 	public int MonstersSmashed{get; set;}
 	
 	private float timer;
-	private GameObject previousHit;
+	private int previousHit = -1;
 	private int bonusValue;
 	private List<GameObject> monsterList = new List<GameObject>();
 	private Vector3 currentMouseClickPosition;
@@ -45,7 +45,7 @@ public class GameController : MonoBehaviour {
 
 				// TODO: is currently giving bonus if hit same monster.
 				// Should be giving bonus if same monster type is hit.
-				if(previousHit != null && previousHit == hit.transform.gameObject){
+				if(hit.transform.GetComponent<Monster>() != null &&  previousHit == hit.transform.GetComponent<Monster>().MonsterType){
 					bonusValue++;
 					ShowBonusPow(currentMouseClickPosition);
 				}
@@ -53,7 +53,7 @@ public class GameController : MonoBehaviour {
 					bonusValue = 1;
 				
 				MonstersSmashed += bonusValue;
-				previousHit = hit.transform.gameObject;
+				previousHit = hit.transform.GetComponent<Monster>().MonsterType;
 
 				if(hit.collider.CompareTag("Monster"))
 					ShowHitPow(currentMouseClickPosition);
