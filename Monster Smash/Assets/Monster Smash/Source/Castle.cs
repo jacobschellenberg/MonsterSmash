@@ -11,7 +11,6 @@ public class Castle : MonoBehaviour {
 	public GameObject hitFlash;
 	public List<GameObject> endExplosions;
 	public float hitFlashTimer = 0.1F;
-	List<GameObject> MissingLifePoints = new List<GameObject>();
 	int health;
 	bool isHit = false;
 	float timer = 0;
@@ -44,30 +43,14 @@ public class Castle : MonoBehaviour {
 
 			health--;
 
-			MissingLifePoints.Add(LifePoints[LifePoints.Count - 1]);
-			LifePoints.RemoveAt(LifePoints.Count - 1);
-			
+			LifePoints[health].GetComponent<UITexture>().mainTexture = MissingLifeTexture;
+
 			isHit = true;
 			Destroy (trigger.gameObject);
 			
 			if(health < 1){
 				gameController.GetComponent<GameController>().GameOver();	
 			}
-		}
-		if(trigger.gameObject.CompareTag("Civilian")){
-			if(health < initialLife){
-				health++;
-				LifePoints.Add(MissingLifePoints[MissingLifePoints.Count - 1]);
-				MissingLifePoints.RemoveAt(MissingLifePoints.Count - 1);
-			}
-		}
-
-		foreach(var lifePoint in LifePoints){
-			lifePoint.GetComponentInChildren<UITexture>().mainTexture = LifeTexture;
-		}
-
-		foreach(var missingLifePoint in MissingLifePoints){
-			missingLifePoint.GetComponentInChildren<UITexture>().mainTexture = MissingLifeTexture;
 		}
 	}
 }

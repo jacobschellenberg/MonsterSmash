@@ -6,7 +6,6 @@ public class GameController : MonoBehaviour {
 
 	public GameObject monsterPrefab;
 	public GameObject spawnPoint;
-	public GameObject agentPrefab;
 	public GameObject powPrefab;
 	public GameObject freezeAllPrefab;
 	public GameObject destroyAllPrefab;
@@ -28,10 +27,51 @@ public class GameController : MonoBehaviour {
 	private int bonusValue;
 	private List<GameObject> monsterList = new List<GameObject>();
 	private Vector3 currentMouseClickPosition;
+	bool gameOver;
+
+	#region everyplay
+	private bool isRecording = false;
+	private bool isPaused = false;
+	private bool isRecordingFinished = false;
+	#endregion
+
+	void Start(){
+		if(Everyplay.SharedInstance != null) {
+			Everyplay.SharedInstance.RecordingStarted += RecordingStarted;
+			Everyplay.SharedInstance.RecordingStopped += RecordingStopped;
+			Everyplay.SharedInstance.WasClosed += LoadEndScene;
+		}
+
+		if(!isRecording)
+			Everyplay.SharedInstance.StartRecording();
+	}
+
+	void Destroy() {
+		if(Everyplay.SharedInstance != null) {
+			Everyplay.SharedInstance.RecordingStarted -= RecordingStarted;
+			Everyplay.SharedInstance.RecordingStopped -= RecordingStopped;
+			Everyplay.SharedInstance.WasClosed -= LoadEndScene;
+		}
+	}
+
+	private void RecordingStarted() {
+		isRecording = true;
+		isPaused = false;
+		isRecordingFinished = false;
+	}
+	
+	private void RecordingStopped() {
+		isRecording = false;
+		isRecordingFinished = true;
+
+		Everyplay.SharedInstance.PlayLastRecording();
+	}
 
 	void Update(){
-		MouseToScreenDetection();
-		GameActive();
+		if(!gameOver){
+			MouseToScreenDetection();
+			GameActive();
+		}
 	}
 	
 	public void MouseToScreenDetection(){
@@ -41,7 +81,6 @@ public class GameController : MonoBehaviour {
 		if(Input.GetButtonDown("Fire1")){
 			if (Physics.Raycast(ray, out hit, Mathf.Infinity)){
 				currentMouseClickPosition = hit.transform.localPosition;
-
 
 				// TODO: is currently giving bonus if hit same monster.
 				// Should be giving bonus if same monster type is hit.
@@ -59,10 +98,6 @@ public class GameController : MonoBehaviour {
 					ShowHitPow(currentMouseClickPosition);
 				else if(hit.collider.CompareTag("DestroyAll"))
 					MonstersSmashed += destroyAllBonus;
-				else if(hit.collider.CompareTag("Civilian")){
-					CivilianHit();
-					ShowFriendlyHitPow(currentMouseClickPosition);
-				}
 			}
 		}
 	}
@@ -80,9 +115,6 @@ public class GameController : MonoBehaviour {
 				NGUITools.AddChild(this.gameObject, destroyAllPrefab);
 			else if(selectBuff < 5)
 				NGUITools.AddChild(this.gameObject, freezeAllPrefab);
-			else if(selectBuff < 10)
-				GameObject.Instantiate(agentPrefab, new Vector3(spawnPoint.transform.localPosition.x + Random.Range(-maxPosX,maxPosX), spawnPoint.transform.localPosition.y + Random.Range(-maxPosY,maxPosY),0), Quaternion.identity);
-			
 			timer = 0;
 		}
 	}
@@ -111,14 +143,19 @@ public class GameController : MonoBehaviour {
 	}
 	
 	public void GameOver(){
+		gameOver = true;
 		if(MonstersSmashed > PlayerPrefs.GetInt("HighScore")){
 			PlayerPrefs.SetInt("HighScore", MonstersSmashed);
 		}
 		PlayerPrefs.SetInt("CurrentScore", MonstersSmashed);
-		Application.LoadLevel("GameOver");
+
+		if(Everyplay.SharedInstance.IsRecordingSupported() && isRecording)
+			Everyplay.SharedInstance.StopRecording();
+		else
+			LoadEndScene();
 	}
-	
-	void CivilianHit(){
-		MonstersSmashed--;
+
+	public void LoadEndScene(){
+		Application.LoadLevel("GameOver");
 	}
 }
