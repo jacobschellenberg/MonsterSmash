@@ -89,7 +89,7 @@ public class Monster : MonsterBase {
 	}
 
 	void Dodge(){
-		transform.position = new Vector3(transform.position.x, transform.position.y + 1, transform.position.z);
+		transform.localPosition = new Vector3(transform.localPosition.x, transform.localPosition.y + 1, transform.localPosition.z);
 		dodge = false;
 	}
 
