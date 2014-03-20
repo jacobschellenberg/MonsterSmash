@@ -2,22 +2,21 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
-//TODO: Split class into GameController and GameViewController
 public class GameViewController : MonoBehaviour {
 
-	public GameController gameController;
+	public ScoreController scoreController;
 	public UILabel monstersSmashedText;
 	public UILabel highScoreText;
 	
 	void Start(){
-		highScoreText.text = string.Format("High Score: {0}", gameController.HighScore);
+		highScoreText.text = string.Format("High Score: {0}", scoreController.HighScore);
 	}
 
 	void Update(){
-		if(gameController.MonstersSmashed > gameController.HighScore){
-			highScoreText.text = string.Format("High Score: {0}", gameController.MonstersSmashed);
+		if(scoreController.MonstersSmashed > scoreController.HighScore){
+			highScoreText.text = string.Format("High Score: {0}", scoreController.MonstersSmashed);
 		}
 
-		monstersSmashedText.text = string.Format("Points: {0}", gameController.MonstersSmashed);
+		monstersSmashedText.text = string.Format("Points: {0}", scoreController.MonstersSmashed);
 	}
 }
