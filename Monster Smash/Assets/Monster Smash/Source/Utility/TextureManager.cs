@@ -28,4 +28,8 @@ public static class TextureManager {
 		
 		return texture;
 	}
+
+	public static Texture2D GetLifePointMissingTexture(){
+		return (Texture2D)Resources.Load("Life/LifePointEmpty");
+	}
 }

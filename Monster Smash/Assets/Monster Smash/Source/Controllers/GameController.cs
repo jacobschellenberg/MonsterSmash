@@ -9,11 +9,11 @@ public class GameController : MonoBehaviour {
 	public GameObject monsterPrefab;
 	public GameObject spawnPoint;
 	public GameObject powPrefab;
+	public UILabel gameOverLabel;
 	public float maxPosX = 735;
 	public float maxPosY = 735;
 	public int TapDamage = 1;
 	public float monsterSpawnTimer = 1.5f;
-	public GameObject castle;
 
 	private float timer;
 	private int previousHit = -1;
@@ -21,6 +21,10 @@ public class GameController : MonoBehaviour {
 	private List<GameObject> monsterList = new List<GameObject>();
 	private Vector3 currentMouseClickPosition;
 	private bool gameOver;
+
+	void Start(){
+		gameOverLabel.gameObject.SetActive(false);
+	}
 
 	void Update(){
 		if(!gameOver){
@@ -43,8 +47,6 @@ public class GameController : MonoBehaviour {
 			if (Physics.Raycast(ray, out hit, Mathf.Infinity)){
 				currentMouseClickPosition = hit.transform.localPosition;
 
-				// TODO: is currently giving bonus if hit same monster.
-				// Should be giving bonus if same monster type is hit.
 				if(hit.transform.GetComponent<Monster>() != null &&  previousHit == hit.transform.GetComponent<Monster>().MonsterType){
 					bonusValue++;
 					ShowBonusPow(currentMouseClickPosition);
@@ -98,8 +100,16 @@ public class GameController : MonoBehaviour {
 
 		this.scoreController.UpdateScore();
 
+		StartCoroutine(DelayedStop());
+	}
+
+	IEnumerator DelayedStop(){
+		gameOverLabel.gameObject.SetActive(true);
+
+		yield return new WaitForSeconds(3);
+
 		if(everyPlayController.IsRecordingSupported)
-			everyPlayController.StartRecording();
+			everyPlayController.StopRecording();
 		else
 			LoadEndScene();
 	}

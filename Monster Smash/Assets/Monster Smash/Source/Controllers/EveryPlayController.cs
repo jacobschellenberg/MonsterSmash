@@ -5,11 +5,10 @@ public class EveryPlayController : MonoBehaviour {
 
 	public GameController gameController;
 
-	public bool IsRecordingSupported{
+	public bool IsRecordingSupported{ 
 		get{
 			return Everyplay.SharedInstance.IsRecordingSupported();
-		}
-		private set{}
+		} 
 	}
 
 	void Start(){
@@ -18,6 +17,13 @@ public class EveryPlayController : MonoBehaviour {
 			Everyplay.SharedInstance.RecordingStopped += RecordingStopped;
 			Everyplay.SharedInstance.WasClosed += RecordingWasClosed;
 		}
+
+		StartCoroutine(DelayedRecording());
+	}
+
+	IEnumerator DelayedRecording(){
+		yield return new WaitForSeconds(2);
+		StartRecording();
 	}
 
 	public void StartRecording(){
@@ -26,13 +32,15 @@ public class EveryPlayController : MonoBehaviour {
 	}
 	
 	public void StopRecording(){
-		Everyplay.SharedInstance.StopRecording();
+		if(Everyplay.SharedInstance.IsRecordingSupported())
+			Everyplay.SharedInstance.StopRecording();
 	}
 
 	void RecordingStarted(){}
 
 	void RecordingStopped() {
-		Everyplay.SharedInstance.PlayLastRecording();
+		if(Everyplay.SharedInstance.IsRecordingSupported())
+			Everyplay.SharedInstance.PlayLastRecording();
 	}
 
 	void RecordingWasClosed(){
