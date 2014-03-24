@@ -8,6 +8,7 @@ public class MenuViewController : MonoBehaviour {
 	public UISprite spaceShip;
 
 	void Start(){
+		//Set up the PlaySequence
 		cow.gameObject.SetActive(true);
 		cow.GetComponent<TweenPosition>().enabled = false;
 		cow.GetComponent<TweenRotation>().enabled = false;

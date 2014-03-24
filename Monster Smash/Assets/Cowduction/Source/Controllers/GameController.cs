@@ -6,70 +6,63 @@ public class GameController : MonoBehaviour {
 
 	public EveryPlayController everyPlayController;
 	public ScoreController scoreController;
-	public GameObject monsterPrefab;
-	public GameObject spawnPoint;
-	public GameObject powPrefab;
-	public UILabel gameOverLabel;
-	public float maxPosX = 735;
-	public float maxPosY = 735;
+	public SpawnController spawnController;
+	public GameViewController gameViewController;
+
+	public int lifePoints = 3;
 	public int TapDamage = 1;
 	public float monsterSpawnTimer = 1.5f;
+	public float gameOverDelay = 3;
 
 	private float timer;
-	private List<GameObject> monsterList = new List<GameObject>();
-	private Vector3 currentMouseClickPosition;
 	private bool gameOver;
 
-	void Start(){
-		gameOverLabel.gameObject.SetActive(false);
+	private static GameController instance;
+	public static GameController Instance{
+		get{
+			if(instance == null)
+				instance = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
+
+			return instance;
+		}
 	}
 
 	void Update(){
 		if(!gameOver){
 			timer += 1 * Time.deltaTime;
 			if(timer > monsterSpawnTimer){
-				SpawnMonster();
-
+				spawnController.SpawnActor();
 				timer = 0;
 			}
 		}
 	}
 	
-	void SpawnMonster(){
-		float xOffset = Random.Range(-maxPosX, maxPosX);
-		float yOffset = Random.Range(-maxPosY, maxPosY);
-
-		GameObject newMonster = NGUITools.AddChild(this.gameObject, monsterPrefab);
-		newMonster.transform.localPosition = new Vector3(spawnPoint.transform.localPosition.x + xOffset, spawnPoint.transform.localPosition.y + yOffset,0);
-		monsterList.Add(newMonster);
-	}
-	
-	public void ShowHitPow(Vector3 position){
-		GameObject newPow = NGUITools.AddChild(this.gameObject, powPrefab);
-		newPow.transform.localPosition = position;
-		Destroy(newPow, 1);
-	}
-	
 	public void GameOver(){
-		gameOver = true;
-
+		this.gameOver = true;
 		this.scoreController.UpdateScore();
-
-		StartCoroutine(DelayedStop());
+		StartCoroutine(_DelayedStopRecording());
 	}
 
-	IEnumerator DelayedStop(){
-		gameOverLabel.gameObject.SetActive(true);
-
-		yield return new WaitForSeconds(3);
+	IEnumerator _DelayedStopRecording(){
+		yield return new WaitForSeconds(gameOverDelay);
 
 		if(everyPlayController.IsRecordingSupported)
-			everyPlayController.StopRecording();
+			this.everyPlayController.StopRecording();
 		else
 			LoadEndScene();
 	}
 
 	public void LoadEndScene(){
 		Application.LoadLevel("GameOver");
+	}
+
+	public void OnActorHitObjective(GameObject source){
+		if(source.CompareTag("Actor")){
+			lifePoints--;
+			gameViewController.UpdateLifePointsDisplay(lifePoints);
+			if(lifePoints < 1)
+				GameOver();	
+			Destroy (source);
+		}
 	}
 }

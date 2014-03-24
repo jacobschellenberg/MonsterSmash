@@ -4,57 +4,53 @@ using System.Collections.Generic;
 
 public class GameViewController : MonoBehaviour {
 
-	public GameObject gameController;
+	public List<GameObject> lifePoints = new List<GameObject>();
 	public ScoreController scoreController;
 	public UILabel monstersSmashedText;
 	public UILabel highScoreText;
-
-	public List<GameObject> LifePoints = new List<GameObject>();
+	public UILabel gameOverLabel;
 	public GameObject hitFlash;
+	public GameObject absorbedPrefab;
 	public float hitFlashTimer = 0.1F;
 
-	private int health;
+	private float timeSinceHit;
 	private bool isHit = false;
-	private float timer = 0;
 
 	void Start(){
+		gameOverLabel.gameObject.SetActive(false);
 		highScoreText.text = string.Format("High Score: {0:00000}", scoreController.HighScore);
-
-		health = LifePoints.Count;
 	}
 
 	void Update(){
 		if(scoreController.TotalPoints > scoreController.HighScore){
 			highScoreText.text = string.Format("High Score: {0:00000}", scoreController.TotalPoints);
 		}
-
 		monstersSmashedText.text = string.Format("Current Score: {0:00000}", scoreController.TotalPoints);
 
-
 		if(isHit){
-			timer += Time.deltaTime;
+			timeSinceHit += Time.deltaTime;
 			hitFlash.SetActive(true);
-			if(timer > hitFlashTimer){
+			if(timeSinceHit > hitFlashTimer){
 				hitFlash.SetActive(false);
-				timer = 0;
+				timeSinceHit = 0;
 				isHit = false;
 			}
 		}
 	}
 
-	public void OnHit(GameObject source){
-		if(source.CompareTag("Monster")){
-			health--;
+	public void UpdateLifePointsDisplay(int currentLifePoints){
+		if(currentLifePoints >= 0)
+			lifePoints[currentLifePoints].GetComponent<UISprite>().spriteName = TextureManager.GetLifePointMissingSprite();
 
-			if(health >= 0)
-				LifePoints[health].GetComponent<UISprite>().spriteName = TextureManager.GetLifePointMissingSprite();
-			
-			isHit = true;
-			Destroy (source);
-			
-			if(health < 1){
-				gameController.GetComponent<GameController>().GameOver();	
-			}
-		}
+		if(currentLifePoints == 0)
+			gameOverLabel.gameObject.SetActive(true);
+
+		isHit = true;
+	}
+
+	public void ShowHitPow(Vector3 position){
+		GameObject prefab = NGUITools.AddChild(this.gameObject, absorbedPrefab);
+		prefab.transform.localPosition = position;
+		Destroy(prefab, 1);
 	}
 }
