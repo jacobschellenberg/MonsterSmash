@@ -4,12 +4,13 @@ using System.Collections;
 public class ScoreController : MonoBehaviour {
 	
 	public int HighScore{ get {return PlayerPrefs.GetInt("HighScore");} private set{} }
-	public int TotalPoints{get; set;}
+	public int TotalPoints{ get; set; }
 
 	private const string highScoreKey = "HighScore";
 	private const string currentScoreKey = "CurrentScore";
 
 	void Start(){
+		// Clear the current score.
 		PlayerPrefs.DeleteKey(currentScoreKey);
 	}
 

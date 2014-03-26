@@ -38,8 +38,8 @@ public class GameController : MonoBehaviour {
 	}
 	
 	public void GameOver(){
-		this.gameOver = true;
-		this.scoreController.UpdateScore();
+		gameOver = true;
+		scoreController.UpdateScore();
 		StartCoroutine(_DelayedStopRecording());
 	}
 
@@ -47,7 +47,7 @@ public class GameController : MonoBehaviour {
 		yield return new WaitForSeconds(gameOverDelay);
 
 		if(everyPlayController.IsRecordingSupported)
-			this.everyPlayController.StopRecording();
+			everyPlayController.StopRecording();
 		else
 			LoadEndScene();
 	}
@@ -64,5 +64,14 @@ public class GameController : MonoBehaviour {
 				GameOver();	
 			Destroy (source);
 		}
+	}
+
+	public void OnActorAbducted(Actor actor){
+		this.scoreController.TotalPoints++;
+	}
+
+	public float OnActorHit(Actor actor){
+		gameViewController.ShowHitPow(actor.transform.localPosition);
+		return TapDamage;
 	}
 }

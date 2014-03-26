@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System.Collections;
-using System.Collections.Generic;
 
 public class Actor : MonoBehaviour {
 
@@ -8,26 +7,18 @@ public class Actor : MonoBehaviour {
 	public float movementSpeed = 0.5f;
 	public float destroyDelay = 1;
 
-	private bool isAlive;
+	private bool isAlive = true;
 	private int randomDirection;
-	private bool absorbedRotateDirection;
 
+	// Initialize
 	void Start(){
-		Initialize ();
-	}
-
-	void Update(){
-		Movement();
-	}
-
-	public void Initialize(){
-		isAlive = true;
-		SetAliveTexture();
-		gameObject.collider.enabled = true;
+		// Set Alive Texture
+		GetComponentInChildren<UITexture>().mainTexture = TextureManager.GetRandomTexture(TextureType.Cows);
 		randomDirection = Random.Range(0,2);
 	}
 
-	public void Movement(){
+	void Update(){
+		// Movement
 		if(isAlive)
 			transform.Translate(Vector3.down * movementSpeed * Time.deltaTime);
 		else{
@@ -36,28 +27,18 @@ public class Actor : MonoBehaviour {
 			}
 			else
 				transform.Rotate(Vector3.forward * -360 * Time.deltaTime);
-			
-			transform.localScale = new Vector3(transform.localScale.x + .5f * Time.deltaTime, transform.localScale.y + .5f * Time.deltaTime, 1);
 		}
 	}
 
 	public void OnHit(GameObject source){
-		GameController.Instance.gameViewController.ShowHitPow(source.transform.localPosition);
-		hitPoints -= GameController.Instance.TapDamage;
+		hitPoints -= GameController.Instance.OnActorHit(this);
 		if(hitPoints <= 0){
-			Dead ();
+			// Abducted
+			isAlive = false;
+			movementSpeed = 0;
+			gameObject.collider.enabled = false;
+			GameController.Instance.OnActorAbducted(this);
+			Destroy(gameObject, destroyDelay);
 		}
-	}
-
-	public void Dead(){
-		isAlive = false;
-		movementSpeed = 0;
-		gameObject.collider.enabled = false;
-		GameController.Instance.scoreController.TotalPoints++;
-		Destroy(gameObject, destroyDelay);
-	}
-
-	public void SetAliveTexture(){
-		GetComponentInChildren<UITexture>().mainTexture = TextureManager.GetRandomTexture(TextureType.Cows);
 	}
 }
