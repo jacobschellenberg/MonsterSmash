@@ -13,8 +13,8 @@ public class MenuViewController : MonoBehaviour {
 		cow.GetComponent<TweenPosition>().enabled = false;
 		cow.GetComponent<TweenRotation>().enabled = false;
 		cow.GetComponent<TweenAlpha>().enabled = false;
-		absorbBeam.gameObject.SetActive(false);
 		absorbBeam.alpha = 0;
+		absorbBeam.gameObject.SetActive(false);
 		spaceShip.gameObject.SetActive(false);
 	}
 
