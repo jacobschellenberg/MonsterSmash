@@ -12,17 +12,13 @@ public class GameOverViewController : MonoBehaviour {
 	[SerializeField]
 	private UILabel totalAbductedAllTime;
 
-	private const string highScoreKey = "HighScore";
-	private const string currentScoreKey = "CurrentScore";
-	private const string totalAbductedAllTimeKey = "TotalAbductedAllTime";
-
 	void Start(){
-		highScore.text = "High Score:\n" + PlayerPrefs.GetInt(highScoreKey).ToString();
-		currentScore.text = "Score: " + PlayerPrefs.GetInt(currentScoreKey).ToString();
-		totalAbductedAllTime.text = "Total Abducted All Time:\n" + PlayerPrefs.GetInt(totalAbductedAllTimeKey);
+		highScore.text = "High Score:\n" + PlayerPrefs.GetInt(ScoreController.highScoreKey).ToString();
+		currentScore.text = "Score: " + PlayerPrefs.GetInt(ScoreController.currentScoreKey).ToString();
+		totalAbductedAllTime.text = "Total Abducted All Time:\n" + PlayerPrefs.GetInt(ScoreController.totalAbductedAllTimeKey);
 
 		newHighScore.gameObject.SetActive(false);
-		if(PlayerPrefs.GetInt("CurrentScore") >= PlayerPrefs.GetInt(highScoreKey))
+		if(PlayerPrefs.GetInt("CurrentScore") >= PlayerPrefs.GetInt(ScoreController.highScoreKey))
 			newHighScore.gameObject.SetActive(true);
 	}
 

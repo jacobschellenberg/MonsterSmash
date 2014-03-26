@@ -8,12 +8,12 @@ public class ScoreController : MonoBehaviour {
 
 	private int totalAbductedAllTime;
 
-	private const string highScoreKey = "HighScore";
-	private const string currentScoreKey = "CurrentScore";
-	private const string totalAbductedAllTimeKey = "TotalAbductedAllTime";
+	public static string highScoreKey = "HighScore";
+	public static string currentScoreKey = "CurrentScore";
+	public static string totalAbductedAllTimeKey = "TotalAbductedAllTime";
 
 	void Start(){
-		// Clear the current score.
+		// Clear the current score for the new round
 		PlayerPrefs.DeleteKey(currentScoreKey);
 		totalAbductedAllTime = PlayerPrefs.GetInt(totalAbductedAllTimeKey);
 	}
