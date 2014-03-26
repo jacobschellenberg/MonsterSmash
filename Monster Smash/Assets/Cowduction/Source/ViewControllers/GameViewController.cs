@@ -12,6 +12,7 @@ public class GameViewController : MonoBehaviour {
 	public GameObject hitFlash;
 	public GameObject absorbedPrefab;
 	public float hitFlashTimer = 0.1F;
+	public float abductDisplayTime = 1;
 
 	private float timeSinceHit;
 	private bool isHit = false;
@@ -48,9 +49,9 @@ public class GameViewController : MonoBehaviour {
 		isHit = true;
 	}
 
-	public void ShowHitPow(Vector3 position){
+	public void ShowAbductEffect(Vector3 position){
 		GameObject prefab = NGUITools.AddChild(this.gameObject, absorbedPrefab);
 		prefab.transform.localPosition = position;
-		Destroy(prefab, 1);
+		Destroy(prefab, abductDisplayTime);
 	}
 }

@@ -29,14 +29,14 @@ public class Actor : MonoBehaviour {
 		}
 	}
 
-	public void OnHit(GameObject source){
+	public void OnHit(){
 		hitPoints -= GameController.Instance.OnActorHit(this);
 		if(hitPoints <= 0){
 			// Abducted
 			isAlive = false;
 			movementSpeed = 0;
 			gameObject.collider.enabled = false;
-			GameController.Instance.OnActorAbducted(this);
+			GameController.Instance.OnActorAbducted();
 			Destroy(gameObject, destroyDelay);
 		}
 	}

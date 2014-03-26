@@ -66,12 +66,12 @@ public class GameController : MonoBehaviour {
 		}
 	}
 
-	public void OnActorAbducted(Actor actor){
+	public void OnActorAbducted(){
 		this.scoreController.TotalPoints++;
 	}
 
 	public float OnActorHit(Actor actor){
-		gameViewController.ShowHitPow(actor.transform.localPosition);
+		gameViewController.ShowAbductEffect(actor.transform.localPosition);
 		return TapDamage;
 	}
 }
