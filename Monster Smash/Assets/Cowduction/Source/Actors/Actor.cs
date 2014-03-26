@@ -22,9 +22,8 @@ public class Actor : MonoBehaviour {
 		if(isAlive)
 			transform.Translate(Vector3.down * movementSpeed * Time.deltaTime);
 		else{
-			if(randomDirection == 0){
+			if(randomDirection == 0)
 				transform.Rotate(Vector3.forward * 360 * Time.deltaTime);
-			}
 			else
 				transform.Rotate(Vector3.forward * -360 * Time.deltaTime);
 		}
