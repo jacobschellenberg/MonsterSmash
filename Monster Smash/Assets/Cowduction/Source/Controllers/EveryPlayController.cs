@@ -3,8 +3,6 @@ using System.Collections;
 
 public class EveryPlayController : MonoBehaviour {
 
-	public GameController gameController;
-
 	public bool IsRecordingSupported{ 
 		get{
 			return Everyplay.SharedInstance.IsRecordingSupported();
@@ -21,6 +19,8 @@ public class EveryPlayController : MonoBehaviour {
 		StartCoroutine(DelayedRecording());
 	}
 
+	// Have to delay start the recording to allow time for everything to load.
+	// 2 seconds hard coded because it should be enough and doesn't need adjusting by designer
 	IEnumerator DelayedRecording(){
 		yield return new WaitForSeconds(2);
 		StartRecording();
@@ -44,6 +44,6 @@ public class EveryPlayController : MonoBehaviour {
 	}
 
 	void RecordingWasClosed(){
-		gameController.LoadEndScene();
+		GameController.Instance.LoadEndScene();
 	}
 }
