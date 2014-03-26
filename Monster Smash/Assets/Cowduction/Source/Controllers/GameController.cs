@@ -67,7 +67,7 @@ public class GameController : MonoBehaviour {
 	}
 
 	public void OnActorAbducted(){
-		this.scoreController.TotalPoints++;
+		scoreController.ActorAbducted();
 	}
 
 	public float OnActorHit(Actor actor){
