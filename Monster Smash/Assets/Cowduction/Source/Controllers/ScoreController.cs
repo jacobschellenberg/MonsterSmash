@@ -25,10 +25,6 @@ public class ScoreController : MonoBehaviour {
 		PlayerPrefs.SetInt(currentScoreKey, TotalPoints);
 	}
 
-	public void ResetHighScore(){
-		PlayerPrefs.DeleteKey(highScoreKey);
-	}
-
 	public void ActorAbducted(){
 		TotalPoints++;
 		PlayerPrefs.SetInt(totalAbductedAllTimeKey, ++totalAbductedAllTime);
