@@ -432,7 +432,7 @@ public class NGUIEditorTools
 	/// Change the import settings of the specified texture asset, making it readable.
 	/// </summary>
 
-	static bool MakeTextureReadable (string path, bool force)
+	static public bool MakeTextureReadable (string path, bool force)
 	{
 		if (string.IsNullOrEmpty(path)) return false;
 		TextureImporter ti = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -441,12 +441,18 @@ public class NGUIEditorTools
 		TextureImporterSettings settings = new TextureImporterSettings();
 		ti.ReadTextureSettings(settings);
 
-		if (force || !settings.readable || settings.npotScale != TextureImporterNPOTScale.None)
+		if (force || !settings.readable || settings.npotScale != TextureImporterNPOTScale.None
+#if !UNITY_3_5 && !UNITY_4_0 && !UNITY_4_1
+			|| settings.alphaIsTransparency
+#endif
+			)
 		{
 			settings.readable = true;
 			settings.textureFormat = TextureImporterFormat.ARGB32;
 			settings.npotScale = TextureImporterNPOTScale.None;
-
+#if !UNITY_3_5 && !UNITY_4_0 && !UNITY_4_1
+			settings.alphaIsTransparency = false;
+#endif
 			ti.SetTextureSettings(settings);
 			AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
 		}
@@ -664,22 +670,22 @@ public class NGUIEditorTools
 
 	static public bool DrawPrefixButton (string text)
 	{
-		return GUILayout.Button(text, "DropDownButton", GUILayout.Width(76f));
+		return GUILayout.Button(text, "DropDown", GUILayout.Width(76f));
 	}
 
 	static public bool DrawPrefixButton (string text, params GUILayoutOption[] options)
 	{
-		return GUILayout.Button(text, "DropDownButton", options);
+		return GUILayout.Button(text, "DropDown", options);
 	}
 
 	static public int DrawPrefixList (int index, string[] list, params GUILayoutOption[] options)
 	{
-		return EditorGUILayout.Popup(index, list, "DropDownButton", options);
+		return EditorGUILayout.Popup(index, list, "DropDown", options);
 	}
 
 	static public int DrawPrefixList (string text, int index, string[] list, params GUILayoutOption[] options)
 	{
-		return EditorGUILayout.Popup(text, index, list, "DropDownButton", options);
+		return EditorGUILayout.Popup(text, index, list, "DropDown", options);
 	}
 
 	/// <summary>
@@ -846,6 +852,7 @@ public class NGUIEditorTools
 			// using BeginGroup/EndGroup, and there is no way to specify a UV rect... le'suq.
 			UnityEditor.EditorGUI.DrawPreviewTexture(outerRect, tex, mat);
 		}
+		GUI.color = Color.white;
 
 		// Draw the lines around the sprite
 		Handles.color = Color.black;
@@ -951,7 +958,7 @@ public class NGUIEditorTools
 
 	static public void DrawSpriteField (string label, SerializedObject ob, string spriteField, params GUILayoutOption[] options)
 	{
-		DrawSpriteField(label, ob, ob.FindProperty("atlas"), ob.FindProperty(spriteField), 76f, false, options);
+		DrawSpriteField(label, ob, ob.FindProperty("atlas"), ob.FindProperty(spriteField), 76f, false, false, options);
 	}
 
 	/// <summary>
@@ -960,14 +967,23 @@ public class NGUIEditorTools
 
 	static public void DrawSpriteField (string label, SerializedObject ob, SerializedProperty atlas, SerializedProperty sprite, params GUILayoutOption[] options)
 	{
-		DrawSpriteField(label, ob, atlas, sprite, 76f, false, options);
+		DrawSpriteField(label, ob, atlas, sprite, 76f, false, false, options);
 	}
 
 	/// <summary>
 	/// Draw a sprite selection field.
 	/// </summary>
 
-	static public void DrawSpriteField (string label, SerializedObject ob, SerializedProperty atlas, SerializedProperty sprite, float width, bool padded, params GUILayoutOption[] options)
+	static public void DrawSpriteField (string label, SerializedObject ob, SerializedProperty atlas, SerializedProperty sprite, bool removable, params GUILayoutOption[] options)
+	{
+		DrawSpriteField(label, ob, atlas, sprite, 76f, false, removable, options);
+	}
+
+	/// <summary>
+	/// Draw a sprite selection field.
+	/// </summary>
+
+	static public void DrawSpriteField (string label, SerializedObject ob, SerializedProperty atlas, SerializedProperty sprite, float width, bool padded, bool removable, params GUILayoutOption[] options)
 	{
 		if (atlas != null && atlas.objectReferenceValue != null)
 		{
@@ -982,7 +998,7 @@ public class NGUIEditorTools
 			{
 				string spriteName = sprite.hasMultipleDifferentValues ? "-" : sprite.stringValue;
 
-				if (padded) GUILayout.BeginHorizontal();
+				GUILayout.BeginHorizontal();
 
 				EditorGUI.BeginDisabledGroup(atlas.hasMultipleDifferentValues);
 				{
@@ -991,11 +1007,15 @@ public class NGUIEditorTools
 				}
 				EditorGUI.EndDisabledGroup();
 
-				if (padded)
-				{
-					GUILayout.Space(18f);
-					GUILayout.EndHorizontal();
-				}
+				EditorGUI.BeginDisabledGroup(!removable);
+#if UNITY_3_5
+				if (GUILayout.Button("X", GUILayout.Width(20f))) sprite.stringValue = "";
+#else
+				if (GUILayout.Button("", "ToggleMixed", GUILayout.Width(20f))) sprite.stringValue = "";
+#endif
+				EditorGUI.EndDisabledGroup();
+				if (padded) GUILayout.Space(18f);
+				GUILayout.EndHorizontal();
 			}
 			GUILayout.EndHorizontal();
 		}
@@ -1090,6 +1110,10 @@ public class NGUIEditorTools
 		}
 		GUILayout.EndHorizontal();
 	}
+
+	/// <summary>
+	/// Repaints all inspector windows related to sprite drawing.
+	/// </summary>
 
 	static public void RepaintSprites ()
 	{
@@ -1239,9 +1263,14 @@ public class NGUIEditorTools
 
 		GUI.changed = false;
 #if UNITY_3_5
+		if (state) text = "\u25B2 " + text;
+		else text = "\u25BC " + text;
 		if (!GUILayout.Toggle(true, text, "dragtab", GUILayout.MinWidth(20f))) state = !state;
 #else
-		if (!GUILayout.Toggle(true, "<b><size=11>" + text + "</size></b>", "dragtab", GUILayout.MinWidth(20f))) state = !state;
+		text = "<b><size=11>" + text + "</size></b>";
+		if (state) text = "\u25B2 " + text;
+		else text = "\u25BC " + text;
+		if (!GUILayout.Toggle(true, text, "dragtab", GUILayout.MinWidth(20f))) state = !state;
 #endif
 		if (GUI.changed) EditorPrefs.SetBool(key, state);
 
@@ -1829,5 +1858,168 @@ public class NGUIEditorTools
 			return go.GetComponent(typeof(T)) as T;
 		}
 		return null;
+	}
+
+	/// <summary>
+	/// Add a border around the specified color buffer with the width and height of a single pixel all around.
+	/// The returned color buffer will have its width and height increased by 2.
+	/// </summary>
+
+	static public Color32[] AddBorder (Color32[] colors, int width, int height)
+	{
+		int w2 = width + 2;
+		int h2 = height + 2;
+
+		Color32[] c2 = new Color32[w2 * h2];
+
+		for (int y2 = 0; y2 < h2; ++y2)
+		{
+			int y1 = NGUIMath.ClampIndex(y2 - 1, height);
+
+			for (int x2 = 0; x2 < w2; ++x2)
+			{
+				int x1 = NGUIMath.ClampIndex(x2 - 1, width);
+				int i2 = x2 + y2 * w2;
+				c2[i2] = colors[x1 + y1 * width];
+
+				if (x2 == 0 || x2 + 1 == w2 || y2 == 0 || y2 + 1 == h2)
+					c2[i2].a = 0;
+			}
+		}
+		return c2;
+	}
+
+	/// <summary>
+	/// Add a soft shadow to the specified color buffer.
+	/// The buffer must have some padding around the edges in order for this to work properly.
+	/// </summary>
+
+	static public void AddShadow (Color32[] colors, int width, int height, Color shadow)
+	{
+		Color sh = shadow;
+		sh.a = 1f;
+
+		for (int y2 = 0; y2 < height; ++y2)
+		{
+			for (int x2 = 0; x2 < width; ++x2)
+			{
+				int index = x2 + y2 * width;
+				Color32 uc = colors[index];
+				if (uc.a == 255) continue;
+
+				Color original = uc;
+				float val = original.a;
+				int count = 1;
+				float div1 = 1f / 255f;
+				float div2 = 2f / 255f;
+				float div3 = 3f / 255f;
+
+				// Left
+				if (x2 != 0)
+				{
+					val += colors[x2 - 1 + y2 * width].a * div1;
+					count += 1;
+				}
+
+				// Top
+				if (y2 + 1 != height)
+				{
+					val += colors[x2 + (y2 + 1) * width].a * div2;
+					count += 2;
+				}
+
+				// Top-left
+				if (x2 != 0 && y2 + 1 != height)
+				{
+					val += colors[x2 - 1 + (y2 + 1) * width].a * div3;
+					count += 3;
+				}
+
+				val /= count;
+
+				Color c = Color.Lerp(original, sh, shadow.a * val);
+				colors[index] = Color.Lerp(c, original, original.a);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Add a visual depth effect to the specified color buffer.
+	/// The buffer must have some padding around the edges in order for this to work properly.
+	/// </summary>
+
+	static public void AddDepth (Color32[] colors, int width, int height, Color shadow)
+	{
+		Color sh = shadow;
+		sh.a = 1f;
+
+		for (int y2 = 0; y2 < height; ++y2)
+		{
+			for (int x2 = 0; x2 < width; ++x2)
+			{
+				int index = x2 + y2 * width;
+				Color32 uc = colors[index];
+				if (uc.a == 255) continue;
+
+				Color original = uc;
+				float val = original.a * 4f;
+				int count = 4;
+				float div1 = 1f / 255f;
+				float div2 = 2f / 255f;
+
+				if (x2 != 0)
+				{
+					val += colors[x2 - 1 + y2 * width].a * div2;
+					count += 2;
+				}
+
+				if (x2 + 1 != width)
+				{
+					val += colors[x2 + 1 + y2 * width].a * div2;
+					count += 2;
+				}
+
+				if (y2 != 0)
+				{
+					val += colors[x2 + (y2 - 1) * width].a * div2;
+					count += 2;
+				}
+
+				if (y2 + 1 != height)
+				{
+					val += colors[x2 + (y2 + 1) * width].a * div2;
+					count += 2;
+				}
+
+				if (x2 != 0 && y2 != 0)
+				{
+					val += colors[x2 - 1 + (y2 - 1) * width].a * div1;
+					++count;
+				}
+
+				if (x2 != 0 && y2 + 1 != height)
+				{
+					val += colors[x2 - 1 + (y2 + 1) * width].a * div1;
+					++count;
+				}
+
+				if (x2 + 1 != width && y2 != 0)
+				{
+					val += colors[x2 + 1 + (y2 - 1) * width].a * div1;
+					++count;
+				}
+
+				if (x2 + 1 != width && y2 + 1 != height)
+				{
+					val += colors[x2 + 1 + (y2 + 1) * width].a * div1;
+					++count;
+				}
+
+				val /= count;
+
+				Color c = Color.Lerp(original, sh, shadow.a * val);
+				colors[index] = Color.Lerp(c, original, original.a);
+			}
+		}
 	}
 }

@@ -11,7 +11,11 @@ using UnityEngine;
 using UnityEditor;
 
 [CanEditMultipleObjects]
+#if UNITY_3_5
 [CustomEditor(typeof(UIInput))]
+#else
+[CustomEditor(typeof(UIInput), true)]
+#endif
 public class UIInputEditor : UIWidgetContainerEditor
 {
 	public override void OnInspectorGUI ()
@@ -76,6 +80,7 @@ public class UIInputEditor : UIWidgetContainerEditor
 			NGUIEditorTools.SetLabelWidth(80f);
 			EditorGUI.BeginDisabledGroup(serializedObject.isEditingMultipleObjects);
 			NGUIEditorTools.DrawEvents("On Submit", input, input.onSubmit);
+			NGUIEditorTools.DrawEvents("On Change", input, input.onChange);
 			EditorGUI.EndDisabledGroup();
 		}
 		EditorGUI.EndDisabledGroup();

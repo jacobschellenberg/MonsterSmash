@@ -12,7 +12,11 @@ using System.Collections.Generic;
 /// </summary>
 
 [CanEditMultipleObjects]
+#if UNITY_3_5
 [CustomEditor(typeof(UITexture))]
+#else
+[CustomEditor(typeof(UITexture), true)]
+#endif
 public class UITextureInspector : UIWidgetInspector
 {
 	UITexture mTex;
@@ -47,7 +51,7 @@ public class UITextureInspector : UIWidgetInspector
 			}
 		}
 		EditorGUI.EndDisabledGroup();
-		return (sp.objectReferenceValue != null);
+		return true;
 	}
 
 	/// <summary>

@@ -92,7 +92,7 @@ public class UIPlayTween : MonoBehaviour
 			eventReceiver = null;
 			callWhenFinished = null;
 #if UNITY_EDITOR
-			UnityEditor.EditorUtility.SetDirty(this);
+			NGUITools.SetDirty(this);
 #endif
 		}
 	}
@@ -105,7 +105,7 @@ public class UIPlayTween : MonoBehaviour
 		{
 			tweenTarget = gameObject;
 #if UNITY_EDITOR
-			UnityEditor.EditorUtility.SetDirty(this);
+			NGUITools.SetDirty(this);
 #endif
 		}
 	}
@@ -293,16 +293,17 @@ public class UIPlayTween : MonoBehaviour
 					// Toggle or activate the tween component
 					if (playDirection == Direction.Toggle)
 					{
+						// Listen for tween finished messages
+						EventDelegate.Add(tw.onFinished, OnFinished, true);
 						tw.Toggle();
 					}
 					else
 					{
 						if (resetOnPlay || (resetIfDisabled && !tw.enabled)) tw.ResetToBeginning();
+						// Listen for tween finished messages
+						EventDelegate.Add(tw.onFinished, OnFinished, true);
 						tw.Play(forward);
 					}
-
-					// Listen for tween finished messages
-					EventDelegate.Add(tw.onFinished, OnFinished, true);
 				}
 			}
 		}

@@ -12,7 +12,11 @@ using System.Collections.Generic;
 /// </summary>
 
 [CanEditMultipleObjects]
+#if UNITY_3_5
 [CustomEditor(typeof(UIRect))]
+#else
+[CustomEditor(typeof(UIRect), true)]
+#endif
 public class UIRectEditor : Editor
 {
 	static protected string[] PrefixName = new string[] { "Left", "Right", "Bottom", "Top" };
@@ -173,6 +177,11 @@ public class UIRectEditor : Editor
 					mTarget[i] = null;
 				}
 				UpdateAnchors(true);
+			}
+
+			if (type != AnchorType.None)
+			{
+				NGUIEditorTools.DrawPaddedProperty("Execute", serializedObject, "updateAnchors");
 			}
 
 			if (type == AnchorType.Advanced)
@@ -444,7 +453,7 @@ public class UIRectEditor : Editor
 				UpdateVerticalAnchor(rect, rect.bottomAnchor, resetRelative);
 				UpdateVerticalAnchor(rect, rect.topAnchor, resetRelative);
 				
-				UnityEditor.EditorUtility.SetDirty(rect);
+				NGUITools.SetDirty(rect);
 			}
 		}
 		serializedObject.Update();
@@ -471,7 +480,7 @@ public class UIRectEditor : Editor
 				if (index == 2) UpdateVerticalAnchor(rect, rect.bottomAnchor, resetRelative);
 				if (index == 3) UpdateVerticalAnchor(rect, rect.topAnchor, resetRelative);
 
-				UnityEditor.EditorUtility.SetDirty(rect);
+				NGUITools.SetDirty(rect);
 			}
 		}
 		serializedObject.Update();

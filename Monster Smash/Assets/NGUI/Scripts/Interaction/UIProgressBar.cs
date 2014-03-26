@@ -125,15 +125,24 @@ public class UIProgressBar : UIWidgetContainer
 
 			if (mValue != val)
 			{
+				float before = this.value;
 				mValue = val;
 
-				if (EventDelegate.IsValid(onChange))
+				if (before != this.value)
 				{
-					current = this;
-					EventDelegate.Execute(onChange);
-					current = null;
+					ForceUpdate();
+
+					if (NGUITools.GetActive(this) && EventDelegate.IsValid(onChange))
+					{
+						current = this;
+						EventDelegate.Execute(onChange);
+						current = null;
+					}
 				}
-				ForceUpdate();
+#if UNITY_EDITOR
+				if (!Application.isPlaying)
+					NGUITools.SetDirty(this);
+#endif
 			}
 		}
 	}
@@ -250,13 +259,25 @@ public class UIProgressBar : UIWidgetContainer
 
 	protected void OnValidate ()
 	{
-		Upgrade();
-		mIsDirty = true;
-		float val = Mathf.Clamp01(mValue);
-		if (mValue != val) mValue = val;
-		if (numberOfSteps < 0) numberOfSteps = 0;
-		else if (numberOfSteps > 20) numberOfSteps = 20;
-		ForceUpdate();
+		// For some bizarre reason Unity calls this function on prefabs, even if prefabs
+		// are not actually used in the scene, nor selected in inspector. Dafuq?
+		if (NGUITools.GetActive(this))
+		{
+			Upgrade();
+			mIsDirty = true;
+			float val = Mathf.Clamp01(mValue);
+			if (mValue != val) mValue = val;
+			if (numberOfSteps < 0) numberOfSteps = 0;
+			else if (numberOfSteps > 20) numberOfSteps = 20;
+			ForceUpdate();
+		}
+		else
+		{
+			float val = Mathf.Clamp01(mValue);
+			if (mValue != val) mValue = val;
+			if (numberOfSteps < 0) numberOfSteps = 0;
+			else if (numberOfSteps > 20) numberOfSteps = 20;
+		}
 	}
 
 	/// <summary>

@@ -22,11 +22,32 @@ public class UIGrid : UIWidgetContainer
 		Vertical,
 	}
 
+	public enum Sorting
+	{
+		None,
+		Alphabetic,
+		Horizontal,
+		Vertical,
+		Custom,
+	}
+
 	/// <summary>
 	/// Type of arrangement -- vertical or horizontal.
 	/// </summary>
 
 	public Arrangement arrangement = Arrangement.Horizontal;
+
+	/// <summary>
+	/// How to sort the grid's elements.
+	/// </summary>
+
+	public Sorting sorting = Sorting.None;
+
+	/// <summary>
+	/// Final pivot point for the grid's content.
+	/// </summary>
+
+	public UIWidget.Pivot pivot = UIWidget.Pivot.TopLeft;
 
 	/// <summary>
 	/// Maximum children per line.
@@ -55,12 +76,6 @@ public class UIGrid : UIWidgetContainer
 	public bool animateSmoothly = false;
 
 	/// <summary>
-	/// Whether the children will be sorted alphabetically prior to repositioning.
-	/// </summary>
-
-	public bool sorted = false;
-
-	/// <summary>
 	/// Whether to ignore the disabled children or to treat them as being present.
 	/// </summary>
 
@@ -78,23 +93,26 @@ public class UIGrid : UIWidgetContainer
 
 	public OnReposition onReposition;
 
+	// Use the 'sorting' property instead
+	[HideInInspector][SerializeField] bool sorted = false;
+
+	protected bool mReposition = false;
+	protected UIPanel mPanel;
+	protected bool mInitDone = false;
+
 	/// <summary>
 	/// Reposition the children on the next Update().
 	/// </summary>
 
 	public bool repositionNow { set { if (value) { mReposition = true; enabled = true; } } }
 
-	bool mReposition = false;
-	UIPanel mPanel;
-	bool mInitDone = false;
-
-	void Init ()
+	protected virtual void Init ()
 	{
 		mInitDone = true;
 		mPanel = NGUITools.FindInParents<UIPanel>(gameObject);
 	}
 
-	void Start ()
+	protected virtual void Start ()
 	{
 		if (!mInitDone) Init();
 		bool smooth = animateSmoothly;
@@ -104,20 +122,28 @@ public class UIGrid : UIWidgetContainer
 		enabled = false;
 	}
 
-	void Update ()
+	protected virtual void Update ()
 	{
 		if (mReposition) Reposition();
 		enabled = false;
 	}
 
 	static public int SortByName (Transform a, Transform b) { return string.Compare(a.name, b.name); }
+	static public int SortHorizontal (Transform a, Transform b) { return a.localPosition.x.CompareTo(b.localPosition.x); }
+	static public int SortVertical (Transform a, Transform b) { return b.localPosition.y.CompareTo(a.localPosition.y); }
+
+	/// <summary>
+	/// Want your own custom sorting logic? Override this function.
+	/// </summary>
+
+	protected virtual void Sort (BetterList<Transform> list) { list.Sort(SortByName); }
 
 	/// <summary>
 	/// Recalculate the position of all elements within the grid, sorting them alphabetically if necessary.
 	/// </summary>
 
 	[ContextMenu("Execute")]
-	public void Reposition ()
+	public virtual void Reposition ()
 	{
 		if (Application.isPlaying && !mInitDone && NGUITools.GetActive(this))
 		{
@@ -132,19 +158,25 @@ public class UIGrid : UIWidgetContainer
 
 		int x = 0;
 		int y = 0;
+		int maxX = 0;
+		int maxY = 0;
 
-		if (sorted)
+		if (sorting != Sorting.None || sorted)
 		{
-			List<Transform> list = new List<Transform>();
+			BetterList<Transform> list = new BetterList<Transform>();
 
 			for (int i = 0; i < myTrans.childCount; ++i)
 			{
 				Transform t = myTrans.GetChild(i);
 				if (t && (!hideInactive || NGUITools.GetActive(t.gameObject))) list.Add(t);
 			}
-			list.Sort(SortByName);
 
-			for (int i = 0, imax = list.Count; i < imax; ++i)
+			if (sorting == Sorting.Alphabetic) list.Sort(SortByName);
+			else if (sorting == Sorting.Horizontal) list.Sort(SortHorizontal);
+			else if (sorting == Sorting.Vertical) list.Sort(SortVertical);
+			else Sort(list);
+
+			for (int i = 0, imax = list.size; i < imax; ++i)
 			{
 				Transform t = list[i];
 
@@ -157,9 +189,12 @@ public class UIGrid : UIWidgetContainer
 
 				if (animateSmoothly && Application.isPlaying)
 				{
-					SpringPosition.Begin(t.gameObject, pos, 15f);
+					SpringPosition.Begin(t.gameObject, pos, 15f).updateScrollView = true;
 				}
 				else t.localPosition = pos;
+
+				maxX = Mathf.Max(maxX, x);
+				maxY = Mathf.Max(maxY, y);
 
 				if (++x >= maxPerLine && maxPerLine > 0)
 				{
@@ -183,14 +218,58 @@ public class UIGrid : UIWidgetContainer
 
 				if (animateSmoothly && Application.isPlaying)
 				{
-					SpringPosition.Begin(t.gameObject, pos, 15f);
+					SpringPosition.Begin(t.gameObject, pos, 15f).updateScrollView = true;
 				}
 				else t.localPosition = pos;
+
+				maxX = Mathf.Max(maxX, x);
+				maxY = Mathf.Max(maxY, y);
 
 				if (++x >= maxPerLine && maxPerLine > 0)
 				{
 					x = 0;
 					++y;
+				}
+			}
+		}
+
+		// Apply the origin offset
+		if (pivot != UIWidget.Pivot.TopLeft)
+		{
+			Vector2 po = NGUIMath.GetPivotOffset(pivot);
+
+			float fx, fy;
+
+			if (arrangement == Arrangement.Horizontal)
+			{
+				fx = Mathf.Lerp(0f, maxX * cellWidth, po.x);
+				fy = Mathf.Lerp(-maxY * cellHeight, 0f, po.y);
+			}
+			else
+			{
+				fx = Mathf.Lerp(0f, maxY * cellWidth, po.x);
+				fy = Mathf.Lerp(-maxX * cellHeight, 0f, po.y);
+			}
+
+			for (int i = 0; i < myTrans.childCount; ++i)
+			{
+				Transform t = myTrans.GetChild(i);
+
+				if (!NGUITools.GetActive(t.gameObject) && hideInactive) continue;
+
+				SpringPosition sp = t.GetComponent<SpringPosition>();
+
+				if (sp != null)
+				{
+					sp.target.x -= fx;
+					sp.target.y -= fy;
+				}
+				else
+				{
+					Vector3 pos = t.localPosition;
+					pos.x -= fx;
+					pos.y -= fy;
+					t.localPosition = pos;
 				}
 			}
 		}

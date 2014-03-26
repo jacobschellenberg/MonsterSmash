@@ -213,11 +213,22 @@ public abstract class UITweener : MonoBehaviour
 
 			current = this;
 
-			List<EventDelegate> mTemp = onFinished;
-			onFinished = new List<EventDelegate>();
+			if (onFinished != null)
+			{
+				mTemp = onFinished;
+				onFinished = new List<EventDelegate>();
 
-			// Notify the listener delegates
-			EventDelegate.Execute(mTemp);
+				// Notify the listener delegates
+				EventDelegate.Execute(mTemp);
+
+				// Re-add the previous persistent delegates
+				for (int i = 0; i < mTemp.Count; ++i)
+				{
+					EventDelegate ed = mTemp[i];
+					if (ed != null) EventDelegate.Add(onFinished, ed, ed.oneShot);
+				}
+				mTemp = null;
+			}
 
 			// Deprecated legacy functionality support
 			if (eventReceiver != null && !string.IsNullOrEmpty(callWhenFinished))
@@ -226,6 +237,42 @@ public abstract class UITweener : MonoBehaviour
 			current = null;
 		}
 		else Sample(mFactor, false);
+	}
+
+	List<EventDelegate> mTemp = null;
+
+	/// <summary>
+	/// Convenience function -- set a new OnFinished event delegate (here for to be consistent with RemoveOnFinished).
+	/// </summary>
+
+	public void SetOnFinished (EventDelegate.Callback del) { EventDelegate.Set(onFinished, del); }
+
+	/// <summary>
+	/// Convenience function -- set a new OnFinished event delegate (here for to be consistent with RemoveOnFinished).
+	/// </summary>
+
+	public void SetOnFinished (EventDelegate del) { EventDelegate.Set(onFinished, del); }
+
+	/// <summary>
+	/// Convenience function -- add a new OnFinished event delegate (here for to be consistent with RemoveOnFinished).
+	/// </summary>
+
+	public void AddOnFinished (EventDelegate.Callback del) { EventDelegate.Add(onFinished, del); }
+
+	/// <summary>
+	/// Convenience function -- add a new OnFinished event delegate (here for to be consistent with RemoveOnFinished).
+	/// </summary>
+
+	public void AddOnFinished (EventDelegate del) { EventDelegate.Add(onFinished, del); }
+
+	/// <summary>
+	/// Remove an OnFinished delegate. Will work even while iterating through the list when the tweener has finished its operation.
+	/// </summary>
+
+	public void RemoveOnFinished (EventDelegate del)
+	{
+		if (onFinished != null) onFinished.Remove(del);
+		if (mTemp != null) mTemp.Remove(del);
 	}
 
 	/// <summary>
@@ -343,6 +390,8 @@ public abstract class UITweener : MonoBehaviour
 
 	/// <summary>
 	/// Manually reset the tweener's state to the beginning.
+	/// If the tween is playing forward, this means the tween's start.
+	/// If the tween is playing in reverse, this means the tween's end.
 	/// </summary>
 
 	public void ResetToBeginning ()
@@ -385,6 +434,19 @@ public abstract class UITweener : MonoBehaviour
 #if UNITY_FLASH
 		if ((object)comp == null) comp = (T)go.AddComponent<T>();
 #else
+		// Find the tween with an unset group ID (group ID of 0).
+		if (comp != null && comp.tweenGroup != 0)
+		{
+			comp = null;
+			T[] comps = go.GetComponents<T>();
+			for (int i = 0, imax = comps.Length; i < imax; ++i)
+			{
+				comp = comps[i];
+				if (comp != null && comp.tweenGroup == 0) break;
+				comp = null;
+			}
+		}
+
 		if (comp == null) comp = go.AddComponent<T>();
 #endif
 		comp.mStarted = false;

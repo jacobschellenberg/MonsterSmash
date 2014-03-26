@@ -56,7 +56,16 @@ public class EventDelegate
 	/// Whether the target script is actually enabled.
 	/// </summary>
 
-	public bool isEnabled { get { return (mRawDelegate && mCachedCallback != null) || (mTarget != null && mTarget.enabled); } }
+	public bool isEnabled
+	{
+		get
+		{
+			if (mRawDelegate && mCachedCallback != null) return true;
+			if (mTarget == null) return false;
+			MonoBehaviour mb = (mTarget as MonoBehaviour);
+			return (mb == null || mb.enabled);
+		}
+	}
 
 	public EventDelegate () { }
 	public EventDelegate (Callback call) { Set(call); }
@@ -115,7 +124,8 @@ public class EventDelegate
 			Callback callback = obj as Callback;
 #if REFLECTION_SUPPORT
 			if (callback.Equals(mCachedCallback)) return true;
-			return (mTarget == (MonoBehaviour)callback.Target && string.Equals(mMethodName, GetMethodName(callback)));
+			MonoBehaviour mb = callback.Target as MonoBehaviour;
+			return (mTarget == mb && string.Equals(mMethodName, GetMethodName(callback)));
 #elif UNITY_FLASH
 			return (callback == mCachedCallback);
 #else
@@ -146,7 +156,7 @@ public class EventDelegate
 	Callback Get ()
 	{
 #if REFLECTION_SUPPORT
-		if (!mRawDelegate && (mCachedCallback == null || (MonoBehaviour)mCachedCallback.Target != mTarget || GetMethodName(mCachedCallback) != mMethodName))
+		if (!mRawDelegate && (mCachedCallback == null || (mCachedCallback.Target as MonoBehaviour) != mTarget || GetMethodName(mCachedCallback) != mMethodName))
 		{
 			if (mTarget != null && !string.IsNullOrEmpty(mMethodName))
 			{
@@ -291,6 +301,9 @@ public class EventDelegate
 				{
 					del.Execute();
 
+					if (i >= list.Count) break;
+					if (list[i] != del) continue;
+
 					if (del.oneShot)
 					{
 						list.RemoveAt(i);
@@ -334,6 +347,19 @@ public class EventDelegate
 	}
 
 	/// <summary>
+	/// Assign a new event delegate.
+	/// </summary>
+
+	static public void Set (List<EventDelegate> list, EventDelegate del)
+	{
+		if (list != null)
+		{
+			list.Clear();
+			list.Add(del);
+		}
+	}
+
+	/// <summary>
 	/// Append a new event delegate to the list.
 	/// </summary>
 
@@ -368,7 +394,7 @@ public class EventDelegate
 	/// Append a new event delegate to the list.
 	/// </summary>
 
-	static public void Add (List<EventDelegate> list, EventDelegate ev) { Add(list, ev, false); }
+	static public void Add (List<EventDelegate> list, EventDelegate ev) { Add(list, ev, ev.oneShot); }
 
 	/// <summary>
 	/// Append a new event delegate to the list.
@@ -376,7 +402,11 @@ public class EventDelegate
 
 	static public void Add (List<EventDelegate> list, EventDelegate ev, bool oneShot)
 	{
-		if (list != null)
+		if (ev.mRawDelegate || ev.target == null || string.IsNullOrEmpty(ev.methodName))
+		{
+			Add(list, ev.mCachedCallback, oneShot);
+		}
+		else if (list != null)
 		{
 			for (int i = 0, imax = list.Count; i < imax; ++i)
 			{

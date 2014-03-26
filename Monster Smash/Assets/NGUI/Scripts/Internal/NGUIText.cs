@@ -16,10 +16,19 @@ using System.Text;
 
 static public class NGUIText
 {
+	public enum Alignment
+	{
+		Automatic,
+		Left,
+		Center,
+		Right,
+		Justified,
+	}
+
 	public enum SymbolStyle
 	{
 		None,
-		Uncolored,
+		Normal,
 		Colored,
 	}
 
@@ -49,7 +58,7 @@ static public class NGUIText
 	static public float fontScale = 1f;
 	static public float pixelDensity = 1f;
 	static public FontStyle fontStyle = FontStyle.Normal;
-	static public TextAlignment alignment = TextAlignment.Left;
+	static public Alignment alignment = Alignment.Left;
 	static public Color tint = Color.white;
 
 	static public int rectWidth = 1000000;
@@ -317,6 +326,11 @@ static public class NGUIText
 				underline = true;
 				index += 3;
 				return true;
+
+				case "[s]":
+				strike = true;
+				index += 3;
+				return true;
 			}
 		}
 
@@ -343,8 +357,8 @@ static public class NGUIText
 				index += 4;
 				return true;
 
-				case "[st]":
-				strike = true;
+				case "[/s]":
+				strike = false;
 				index += 4;
 				return true;
 			}
@@ -367,11 +381,6 @@ static public class NGUIText
 				sub = 2;
 				index += 5;
 				return true;
-
-				case "[/st]":
-				strike = false;
-				index += 5;
-				return true;
 			}
 		}
 
@@ -391,6 +400,21 @@ static public class NGUIText
 				case "[/sup]":
 				sub = 0;
 				index += 6;
+				return true;
+
+				case "[/url]":
+				index += 6;
+				return true;
+			}
+		}
+
+		if (text[index + 1] == 'u' && text[index + 2] == 'r' && text[index + 3] == 'l' && text[index + 4] == '=')
+		{
+			int closingBracket = text.IndexOf(']', index + 4);
+			
+			if (closingBracket != -1)
+			{
+				index = closingBracket + 1;
 				return true;
 			}
 		}
@@ -455,41 +479,92 @@ static public class NGUIText
 	/// Align the vertices to be right or center-aligned given the line width specified by NGUIText.lineWidth.
 	/// </summary>
 
-	static public void Align (BetterList<Vector3> verts, int indexOffset, float offset)
+	static public void Align (BetterList<Vector3> verts, int indexOffset, float printedWidth)
 	{
-		if (alignment != TextAlignment.Left)
+		switch (alignment)
 		{
-			float padding = 0f;
-
-			if (alignment == TextAlignment.Right)
+			case Alignment.Right:
 			{
-				padding = rectWidth - offset;
-				if (padding < 0f) padding = 0f;
+				float padding = rectWidth - printedWidth;
+				if (padding < 0f) return;
+#if UNITY_FLASH
+				for (int i = indexOffset; i < verts.size; ++i)
+					verts.buffer[i] = verts.buffer[i] + new Vector3(padding, 0f);
+#else
+				for (int i = indexOffset; i < verts.size; ++i)
+					verts.buffer[i].x += padding;
+#endif
+				break;
 			}
-			else
+
+			case Alignment.Center:
 			{
-				// Centered alignment
-				padding = (rectWidth - offset) * 0.5f;
-				if (padding < 0f) padding = 0f;
+				float padding = (rectWidth - printedWidth) * 0.5f;
+				if (padding < 0f) return;
 
 				// Keep it pixel-perfect
-				int diff = Mathf.RoundToInt(rectWidth - offset);
+				int diff = Mathf.RoundToInt(rectWidth - printedWidth);
 				int intWidth = Mathf.RoundToInt(rectWidth);
 
 				bool oddDiff = (diff & 1) == 1;
 				bool oddWidth = (intWidth & 1) == 1;
 				if ((oddDiff && !oddWidth) || (!oddDiff && oddWidth))
-					padding += 0.5f / fontScale;
+					padding += 0.5f * fontScale;
+#if UNITY_FLASH
+				for (int i = indexOffset; i < verts.size; ++i)
+					verts.buffer[i] = verts.buffer[i] + new Vector3(padding, 0f);
+#else
+				for (int i = indexOffset; i < verts.size; ++i)
+					verts.buffer[i].x += padding;
+#endif
+				break;
 			}
 
-			for (int i = indexOffset; i < verts.size; ++i)
+			case Alignment.Justified:
 			{
+				// Printed text needs to reach at least 65% of the width in order to be justified
+				if (printedWidth < rectWidth * 0.65f) return;
+
+				// There must be some padding involved
+				float padding = (rectWidth - printedWidth) * 0.5f;
+				if (padding < 1f) return;
+
+				// There must be at least two characters
+				int chars = (verts.size - indexOffset) / 4;
+				if (chars < 1) return;
+
+				float progressPerChar = 1f / (chars - 1);
+				float scale = rectWidth / printedWidth;
+
+				for (int i = indexOffset + 4, charIndex = 1; i < verts.size; ++charIndex)
+				{
+					float x0 = verts.buffer[i].x;
+					float x1 = verts.buffer[i+2].x;
+					float w = x1 - x0;
+					float x0a = x0 * scale;
+					float x1a = x0a + w;
+					float x1b = x1 * scale;
+					float x0b = x1b - w;
+					float progress = charIndex * progressPerChar;
+
+					x0 = Mathf.Lerp(x0a, x0b, progress);
+					x1 = Mathf.Lerp(x1a, x1b, progress);
+					x0 = Mathf.Round(x0);
+					x1 = Mathf.Round(x1);
 #if UNITY_FLASH
-				verts.buffer[i] = verts.buffer[i] + new Vector3(padding, 0f);
+					verts.buffer[i] = verts.buffer[i] + new Vector3(x0, 0f);
+					verts.buffer[i+1] = verts.buffer[i+1] + new Vector3(x0, 0f);
+					verts.buffer[i+2] = verts.buffer[i+2] + new Vector3(x1, 0f);
+					verts.buffer[i+3] = verts.buffer[i+3] + new Vector3(x1, 0f);
+					i += 4;
 #else
-				verts.buffer[i] = verts.buffer[i];
-				verts.buffer[i].x += padding;
+					verts.buffer[i++].x = x0;
+					verts.buffer[i++].x = x0;
+					verts.buffer[i++].x = x1;
+					verts.buffer[i++].x = x1;
 #endif
+				}
+				break;
 			}
 		}
 	}
@@ -540,6 +615,16 @@ static public class NGUIText
 	}
 
 	/// <summary>
+	/// Convenience function that ends the line by replacing a space with a newline character.
+	/// </summary>
+
+	static void ReplaceSpaceWithNewline (ref StringBuilder s)
+	{
+		int i = s.Length - 1;
+		if (i > 0 && s[i] == ' ') s[i] = '\n';
+	}
+
+	/// <summary>
 	/// Get the printed size of the specified string. The returned value is in pixels.
 	/// </summary>
 
@@ -579,20 +664,41 @@ static public class NGUIText
 
 				if (symbol == null)
 				{
-					ch = text[i];
 					float w = GetGlyphWidth(ch, prev);
-					if (w != 0f) x += finalSpacingX + w;
-					prev = ch;
+					
+					if (w != 0f)
+					{
+						w += finalSpacingX;
+
+						if (Mathf.RoundToInt(x + w) > rectWidth)
+						{
+							if (x > maxX) maxX = x - finalSpacingX;
+							x = w;
+							y += finalLineHeight;
+						}
+						else x += w;
+
+						prev = ch;
+					}
 				}
 				else
 				{
-					x += finalSpacingX + symbol.advance * fontScale;
+					float w = finalSpacingX + symbol.advance * fontScale;
+
+					if (Mathf.RoundToInt(x + w) > rectWidth)
+					{
+						if (x > maxX) maxX = x - finalSpacingX;
+						x = w;
+						y += finalLineHeight;
+					}
+					else x += w;
+
 					i += symbol.sequence.Length - 1;
 					prev = 0;
 				}
 			}
 
-			v.x = ((x > maxX) ? x : maxX);
+			v.x = ((x > maxX) ? x - finalSpacingX : maxX);
 			v.y = (y + finalLineHeight);
 		}
 		return v;
@@ -633,7 +739,7 @@ static public class NGUIText
 			}
 		}
 
-		float remainingWidth = NGUIText.rectWidth;
+		float remainingWidth = rectWidth;
 		int currentCharacterIndex = mSizes.size;
 
 		while (currentCharacterIndex > 0 && remainingWidth > 0)
@@ -656,25 +762,20 @@ static public class NGUIText
 		return text.Substring(offset, textLength - offset);
 	}
 
-#if DYNAMIC_FONT
-	/// <summary>
-	/// Ensure that we have the requested characters present.
-	/// </summary>
-
-	static public void RequestCharactersInTexture (Font font, string text)
-	{
-		if (font != null)
-		{
-			font.RequestCharactersInTexture(text, finalSize, fontStyle);
-		}
-	}
-#endif
-
 	/// <summary>
 	/// Text wrapping functionality. The 'width' and 'height' should be in pixels.
 	/// </summary>
 
 	static public bool WrapText (string text, out string finalText)
+	{
+		return WrapText(text, out finalText, false);
+	}
+
+	/// <summary>
+	/// Text wrapping functionality. The 'width' and 'height' should be in pixels.
+	/// </summary>
+
+	static public bool WrapText (string text, out string finalText, bool keepCharCount)
 	{
 		if (rectWidth < 1 || rectHeight < 1 || finalLineHeight < 1f)
 		{
@@ -700,11 +801,14 @@ static public class NGUIText
 		float remainingWidth = rectWidth;
 		int start = 0, offset = 0, lineCount = 1, prev = 0;
 		bool lineIsEmpty = true;
+		bool fits = true;
+		bool eastern = false;
 
 		// Run through all characters
 		for (; offset < textLength; ++offset)
 		{
 			char ch = text[offset];
+			if (ch > 12287) eastern = true;
 
 			// New line character -- start a new line
 			if (ch == '\n')
@@ -721,15 +825,6 @@ static public class NGUIText
 				start = offset + 1;
 				prev = 0;
 				continue;
-			}
-
-			// If this marks the end of a word, add it to the final string.
-			if (ch == ' ' && prev != ' ' && start < offset)
-			{
-				sb.Append(text.Substring(start, offset - start + 1));
-				lineIsEmpty = false;
-				start = offset + 1;
-				prev = ch;
 			}
 
 			// When encoded symbols such as [RrGgBb] or [-] are encountered, skip past them
@@ -753,21 +848,46 @@ static public class NGUIText
 			// Reduce the width
 			remainingWidth -= glyphWidth;
 
+			// If this marks the end of a word, add it to the final string.
+			if (ch == ' ' && !eastern)
+			{
+				if (prev == ' ')
+				{
+					sb.Append(' ');
+					start = offset + 1;
+				}
+				else if (prev != ' ' && start < offset)
+				{
+					int end = offset - start + 1;
+
+					// Last word on the last line should not include an invisible character
+					if (lineCount == maxLineCount && remainingWidth <= 0f && offset < textLength && text[offset] <= ' ') --end;
+
+					sb.Append(text.Substring(start, end));
+					lineIsEmpty = false;
+					start = offset + 1;
+					prev = ch;
+				}
+			}
+
 			// Doesn't fit?
-			if (remainingWidth < 0f)
+			if (Mathf.RoundToInt(remainingWidth) < 0)
 			{
 				// Can't start a new line
 				if (lineIsEmpty || lineCount == maxLineCount)
 				{
 					// This is the first word on the line -- add it up to the character that fits
 					sb.Append(text.Substring(start, Mathf.Max(0, offset - start)));
+					if (ch != ' ' && !eastern) fits = false;
 
 					if (lineCount++ == maxLineCount)
 					{
 						start = offset;
 						break;
 					}
-					EndLine(ref sb);
+
+					if (keepCharCount) ReplaceSpaceWithNewline(ref sb);
+					else EndLine(ref sb);
 
 					// Start a brand-new line
 					lineIsEmpty = true;
@@ -786,9 +906,6 @@ static public class NGUIText
 				}
 				else
 				{
-					// Skip all spaces before the word
-					while (start < textLength && text[start] == ' ') ++start;
-
 					// Revert the position to the beginning of the word and reset the line
 					lineIsEmpty = true;
 					remainingWidth = rectWidth;
@@ -796,7 +913,8 @@ static public class NGUIText
 					prev = 0;
 
 					if (lineCount++ == maxLineCount) break;
-					EndLine(ref sb);
+					if (keepCharCount) ReplaceSpaceWithNewline(ref sb);
+					else EndLine(ref sb);
 					continue;
 				}
 			}
@@ -812,7 +930,7 @@ static public class NGUIText
 
 		if (start < offset) sb.Append(text.Substring(start, offset - start));
 		finalText = sb.ToString();
-		return (offset == textLength) || (lineCount <= Mathf.Min(maxLines, maxLineCount));
+		return fits && ((offset == textLength) || (lineCount <= Mathf.Min(maxLines, maxLineCount)));
 	}
 
 	static Color32 s_c0, s_c1;
@@ -842,6 +960,7 @@ static public class NGUIText
 
 		Rect uvRect = new Rect();
 		float invX = 0f, invY = 0f;
+		float sizePD = sizeF * pixelDensity;
 
 		// Advanced symbol support contributed by Rudy Pangestu.
 		bool subscript = false;
@@ -871,11 +990,12 @@ static public class NGUIText
 
 			prevX = x;
 
+			// New line character -- skip to the next line
 			if (ch == '\n')
 			{
 				if (x > maxX) maxX = x;
 
-				if (alignment != TextAlignment.Left)
+				if (alignment != Alignment.Left)
 				{
 					Align(verts, indexOffset, x - finalSpacingX);
 					indexOffset = verts.size;
@@ -887,6 +1007,7 @@ static public class NGUIText
 				continue;
 			}
 
+			// Invalid character -- skip it
 			if (ch < ' ')
 			{
 				prev = ch;
@@ -917,6 +1038,27 @@ static public class NGUIText
 				v1x = v0x + symbol.width * fontScale;
 				v1y = -(y + symbol.offsetY * fontScale);
 				v0y = v1y - symbol.height * fontScale;
+
+				// Doesn't fit? Move down to the next line
+				if (Mathf.RoundToInt(x + symbol.advance * fontScale) > rectWidth)
+				{
+					if (x == 0f) return;
+
+					if (alignment != Alignment.Left && indexOffset < verts.size)
+					{
+						Align(verts, indexOffset, x - finalSpacingX);
+						indexOffset = verts.size;
+					}
+
+					v0x -= x;
+					v1x -= x;
+					v0y -= finalLineHeight;
+					v1y -= finalLineHeight;
+
+					x = 0;
+					y += finalLineHeight;
+					prevX = 0;
+				}
 
 				verts.Add(new Vector3(v0x, v0y));
 				verts.Add(new Vector3(v0x, v1y));
@@ -962,6 +1104,57 @@ static public class NGUIText
 				if (glyph == null) continue;
 				prev = ch;
 
+				if (subscriptMode != 0)
+				{
+					glyph.v0.x *= sizeShrinkage;
+					glyph.v0.y *= sizeShrinkage;
+					glyph.v1.x *= sizeShrinkage;
+					glyph.v1.y *= sizeShrinkage;
+
+					if (subscriptMode == 1)
+					{
+						glyph.v0.y -= fontScale * fontSize * 0.4f;
+						glyph.v1.y -= fontScale * fontSize * 0.4f;
+					}
+					else
+					{
+						glyph.v0.y += fontScale * fontSize * 0.05f;
+						glyph.v1.y += fontScale * fontSize * 0.05f;
+					}
+				}
+
+				float y0 = glyph.v0.y;
+				float y1 = glyph.v1.y;
+
+				v0x = glyph.v0.x + x;
+				v0y = glyph.v0.y - y;
+				v1x = glyph.v1.x + x;
+				v1y = glyph.v1.y - y;
+
+				float w = glyph.advance;
+				if (finalSpacingX < 0f) w += finalSpacingX;
+
+				// Doesn't fit? Move down to the next line
+				if (Mathf.RoundToInt(x + w) > rectWidth)
+				{
+					if (x == 0f) return;
+
+					if (alignment != Alignment.Left && indexOffset < verts.size)
+					{
+						Align(verts, indexOffset, x - finalSpacingX);
+						indexOffset = verts.size;
+					}
+
+					v0x -= x;
+					v1x -= x;
+					v0y -= finalLineHeight;
+					v1y -= finalLineHeight;
+
+					x = 0;
+					y += finalLineHeight;
+					prevX = 0;
+				}
+
 				if (ch == ' ')
 				{
 					if (underline)
@@ -972,12 +1165,14 @@ static public class NGUIText
 					{
 						ch = '-';
 					}
-					else
-					{
-						x += finalSpacingX + glyph.advance;
-						continue;
-					}
 				}
+
+				// Advance the position
+				x += (subscriptMode == 0) ? finalSpacingX + glyph.advance :
+					(finalSpacingX + glyph.advance) * sizeShrinkage;
+
+				// No need to continue if this is a space character
+				if (ch == ' ') continue;
 
 				// Texture coordinates
 				if (uvs != null)
@@ -1016,11 +1211,11 @@ static public class NGUIText
 					{
 						if (gradient)
 						{
-							float min = sizeF + glyph.v0.y;
-							float max = sizeF + glyph.v1.y;
+							float min = sizePD + y0 / fontScale;
+							float max = sizePD + y1 / fontScale;
 
-							min /= sizeF;
-							max /= sizeF;
+							min /= sizePD;
+							max /= sizePD;
 
 							s_c0 = Color.Lerp(gb, gt, min);
 							s_c1 = Color.Lerp(gb, gt, max);
@@ -1061,48 +1256,11 @@ static public class NGUIText
 							case 8: col.a += 0.51f; break;
 						}
 
+						Color32 c = col;
 						for (int j = 0, jmax = (bold ? 16 : 4); j < jmax; ++j)
-							cols.Add(uc);
+							cols.Add(c);
 					}
 				}
-
-				if (subscriptMode != 0)
-				{
-					glyph.v0.x *= sizeShrinkage;
-					glyph.v0.y *= sizeShrinkage;
-					glyph.v1.x *= sizeShrinkage;
-					glyph.v1.y *= sizeShrinkage;
-
-					if (subscriptMode == 1)
-					{
-						glyph.v0.y -= fontScale * fontSize * 0.4f;
-						glyph.v1.y -= fontScale * fontSize * 0.4f;
-					}
-					else
-					{
-						glyph.v0.y += fontScale * fontSize * 0.05f;
-						glyph.v1.y += fontScale * fontSize * 0.05f;
-					}
-				}
-
-				glyph.v0.x += x;
-				glyph.v1.x += x;
-				glyph.v0.y -= y;
-				glyph.v1.y -= y;
-
-				if (subscriptMode == 0)
-				{
-					x += finalSpacingX + glyph.advance;
-				}
-				else
-				{
-					x += (finalSpacingX + glyph.advance) * sizeShrinkage;
-				}
-
-				v0x = glyph.v0.x;
-				v0y = glyph.v0.y;
-				v1x = glyph.v1.x;
-				v1y = glyph.v1.y;
 
 				// Bold and italic contributed by Rudy Pangestu.
 				if (!bold)
@@ -1116,10 +1274,11 @@ static public class NGUIText
 					}
 					else // Italic
 					{
-						verts.Add(new Vector3(v0x, v0y));
-						verts.Add(new Vector3(v0x + fontSize * 0.2f, v1y));
-						verts.Add(new Vector3(v1x + fontSize * 0.2f, v1y));
-						verts.Add(new Vector3(v1x, v0y));
+						float slant = fontSize * 0.1f * ((v1y - v0y) / fontSize);
+						verts.Add(new Vector3(v0x - slant, v0y));
+						verts.Add(new Vector3(v0x + slant, v1y));
+						verts.Add(new Vector3(v1x + slant, v1y));
+						verts.Add(new Vector3(v1x - slant, v0y));
 					}
 				}
 				else // Bold
@@ -1129,10 +1288,11 @@ static public class NGUIText
 						float a = mBoldOffset[j * 2];
 						float b = mBoldOffset[j * 2 + 1];
 
-						verts.Add(new Vector3(v0x + a, v0y + b));
-						verts.Add(new Vector3(v0x + (italic ? fontSize * 0.2f : 0) + a, v1y + b));
-						verts.Add(new Vector3(v1x + (italic ? fontSize * 0.2f : 0) + a, v1y + b));
-						verts.Add(new Vector3(v1x + a, v0y + b));
+						float slant = a + (italic ? fontSize * 0.1f * ((v1y - v0y) / fontSize) : 0f);
+						verts.Add(new Vector3(v0x - slant, v0y + b));
+						verts.Add(new Vector3(v0x + slant, v1y + b));
+						verts.Add(new Vector3(v1x + slant, v1y + b));
+						verts.Add(new Vector3(v1x - slant, v0y + b));
 					}
 				}
 
@@ -1196,7 +1356,7 @@ static public class NGUIText
 			}
 		}
 
-		if (alignment != TextAlignment.Left && indexOffset < verts.size)
+		if (alignment != Alignment.Left && indexOffset < verts.size)
 		{
 			Align(verts, indexOffset, x - finalSpacingX);
 			indexOffset = verts.size;
@@ -1234,7 +1394,7 @@ static public class NGUIText
 			{
 				if (x > maxX) maxX = x;
 
-				if (alignment != TextAlignment.Left)
+				if (alignment != Alignment.Left)
 				{
 					Align(verts, indexOffset, x - finalSpacingX);
 					indexOffset = verts.size;
@@ -1266,7 +1426,23 @@ static public class NGUIText
 
 				if (w != 0f)
 				{
-					x += w + finalSpacingX;
+					w += finalSpacingX;
+
+					if (Mathf.RoundToInt(x + w) > rectWidth)
+					{
+						if (x == 0f) return;
+
+						if (alignment != Alignment.Left && indexOffset < verts.size)
+						{
+							Align(verts, indexOffset, x - finalSpacingX);
+							indexOffset = verts.size;
+						}
+
+						x = w;
+						y += finalLineHeight;
+					}
+					else x += w;
+
 					verts.Add(new Vector3(x, -y - halfSize));
 					indices.Add(i + 1);
 					prev = ch;
@@ -1274,7 +1450,23 @@ static public class NGUIText
 			}
 			else
 			{
-				x += symbol.advance * fontScale + finalSpacingX;
+				float w = symbol.advance * fontScale + finalSpacingX;
+
+				if (Mathf.RoundToInt(x + w) > rectWidth)
+				{
+					if (x == 0f) return;
+
+					if (alignment != Alignment.Left && indexOffset < verts.size)
+					{
+						Align(verts, indexOffset, x - finalSpacingX);
+						indexOffset = verts.size;
+					}
+
+					x = w;
+					y += finalLineHeight;
+				}
+				else x += w;
+
 				verts.Add(new Vector3(x, -y - halfSize));
 				indices.Add(i + 1);
 				i += symbol.sequence.Length - 1;
@@ -1282,7 +1474,7 @@ static public class NGUIText
 			}
 		}
 
-		if (alignment != TextAlignment.Left && indexOffset < verts.size)
+		if (alignment != Alignment.Left && indexOffset < verts.size)
 			Align(verts, indexOffset, x - finalSpacingX);
 	}
 
@@ -1335,8 +1527,7 @@ static public class NGUIText
 				// Align the caret
 				if (caret != null && caretSet)
 				{
-					if (NGUIText.alignment != TextAlignment.Left)
-						NGUIText.Align(caret, caretOffset, x - finalSpacingX);
+					if (alignment != Alignment.Left) Align(caret, caretOffset, x - finalSpacingX);
 					caret = null;
 				}
 
@@ -1359,9 +1550,9 @@ static public class NGUIText
 					}
 
 					// Align the highlight
-					if (NGUIText.alignment != TextAlignment.Left && highlightOffset < highlight.size)
+					if (alignment != Alignment.Left && highlightOffset < highlight.size)
 					{
-						NGUIText.Align(highlight, highlightOffset, x - finalSpacingX);
+						Align(highlight, highlightOffset, x - finalSpacingX);
 						highlightOffset = highlight.size;
 					}
 				}
@@ -1393,6 +1584,56 @@ static public class NGUIText
 				float v1x = x + w;
 				float v0y = -y - fs;
 				float v1y = -y;
+
+				if (Mathf.RoundToInt(v1x + finalSpacingX) > rectWidth)
+				{
+					if (x == 0f) return;
+
+					// Used for alignment purposes
+					if (x > maxX) maxX = x;
+
+					// Align the caret
+					if (caret != null && caretSet)
+					{
+						if (alignment != Alignment.Left) Align(caret, caretOffset, x - finalSpacingX);
+						caret = null;
+					}
+
+					if (highlight != null)
+					{
+						if (highlighting)
+						{
+							// Close the selection on this line
+							highlighting = false;
+							highlight.Add(last1);
+							highlight.Add(last0);
+						}
+						else if (start <= index && end > index)
+						{
+							// This must be an empty line. Add a narrow vertical highlight.
+							highlight.Add(new Vector3(x, -y - fs));
+							highlight.Add(new Vector3(x, -y));
+							highlight.Add(new Vector3(x + 2f, -y));
+							highlight.Add(new Vector3(x + 2f, -y - fs));
+						}
+
+						// Align the highlight
+						if (alignment != Alignment.Left && highlightOffset < highlight.size)
+						{
+							Debug.Log("Aligning");
+							Align(highlight, highlightOffset, x - finalSpacingX);
+							highlightOffset = highlight.size;
+						}
+					}
+
+					v0x -= x;
+					v1x -= x;
+					v0y -= finalLineHeight;
+					v1y -= finalLineHeight;
+
+					x = 0;
+					y += finalLineHeight;
+				}
 
 				x += w + finalSpacingX;
 
@@ -1436,8 +1677,8 @@ static public class NGUIText
 				caret.Add(new Vector3(x + 1f, -y - fs));
 			}
 
-			if (NGUIText.alignment != TextAlignment.Left)
-				NGUIText.Align(caret, caretOffset, x - finalSpacingX);
+			if (alignment != Alignment.Left)
+				Align(caret, caretOffset, x - finalSpacingX);
 		}
 
 		// Close the selection
@@ -1459,8 +1700,8 @@ static public class NGUIText
 			}
 
 			// Align the highlight
-			if (NGUIText.alignment != TextAlignment.Left && highlightOffset < highlight.size)
-				NGUIText.Align(highlight, highlightOffset, x - finalSpacingX);
+			if (alignment != Alignment.Left && highlightOffset < highlight.size)
+				Align(highlight, highlightOffset, x - finalSpacingX);
 		}
 	}
 }
