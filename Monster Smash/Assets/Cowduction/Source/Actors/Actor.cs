@@ -8,13 +8,13 @@ public class Actor : MonoBehaviour {
 	public float destroyDelay = 1;
 
 	private bool isAlive = true;
-	private int randomDirection;
+	private int abductedRandomRotateDirection;
 
 	// Initialize
 	void Start(){
 		// Set Alive Texture
 		GetComponentInChildren<UITexture>().mainTexture = TextureManager.GetRandomTexture(TextureType.Cows);
-		randomDirection = Random.Range(0,2);
+		abductedRandomRotateDirection = Random.Range(0,2);
 	}
 
 	void Update(){
@@ -22,7 +22,7 @@ public class Actor : MonoBehaviour {
 		if(isAlive)
 			transform.Translate(Vector3.down * movementSpeed * Time.deltaTime);
 		else{
-			if(randomDirection == 0)
+			if(abductedRandomRotateDirection == 0)
 				transform.Rotate(Vector3.forward * 360 * Time.deltaTime);
 			else
 				transform.Rotate(Vector3.forward * -360 * Time.deltaTime);

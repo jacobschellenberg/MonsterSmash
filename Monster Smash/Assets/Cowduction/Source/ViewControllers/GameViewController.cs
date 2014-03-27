@@ -1,9 +1,12 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 public class GameViewController : MonoBehaviour {
 
+	public UILabel debugLabel;
+	public UILabel debugLabel2;
 	public List<GameObject> lifePoints = new List<GameObject>();
 	public ScoreController scoreController;
 	public UILabel monstersSmashedText;
@@ -13,6 +16,7 @@ public class GameViewController : MonoBehaviour {
 	public GameObject absorbedPrefab;
 	public float hitFlashTimer = 0.1F;
 	public float abductDisplayTime = 1;
+	public GameObject shareRecording;
 
 	private float timeSinceHit;
 	private bool isHit = false;
@@ -20,6 +24,8 @@ public class GameViewController : MonoBehaviour {
 	void Start(){
 		gameOverLabel.gameObject.SetActive(false);
 		highScoreText.text = string.Format("High Score: {0:00000}", scoreController.HighScore);
+		shareRecording.SetActive(false);
+		debugLabel.text = string.Empty;
 	}
 
 	void Update(){
@@ -37,6 +43,18 @@ public class GameViewController : MonoBehaviour {
 				isHit = false;
 			}
 		}
+	}
+
+	public void ShowShareRecordingWindow(){
+		shareRecording.SetActive(true);
+	}
+
+	public void OnShareButtonClicked(){
+		Everyplay.SharedInstance.PlayLastRecording();
+	}
+
+	public void OnPlayAgainButtonClicked(){
+		GameController.Instance.LoadEndScene();
 	}
 
 	public void UpdateLifePointsDisplay(int currentLifePoints){

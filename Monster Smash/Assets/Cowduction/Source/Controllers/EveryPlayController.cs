@@ -3,12 +3,6 @@ using System.Collections;
 
 public class EveryPlayController : MonoBehaviour {
 
-	public bool IsRecordingSupported{ 
-		get{
-			return Everyplay.SharedInstance.IsRecordingSupported();
-		} 
-	}
-
 	void Start(){
 		if(Everyplay.SharedInstance != null) {
 			Everyplay.SharedInstance.RecordingStarted += RecordingStarted;
@@ -26,6 +20,10 @@ public class EveryPlayController : MonoBehaviour {
 		StartRecording();
 	}
 
+	public bool IsRecordingSupported(){
+		return Everyplay.SharedInstance.IsRecording();
+	}
+
 	public void StartRecording(){
 		if(Everyplay.SharedInstance.IsRecordingSupported())
 			Everyplay.SharedInstance.StartRecording();
@@ -40,7 +38,7 @@ public class EveryPlayController : MonoBehaviour {
 
 	void RecordingStopped() {
 		if(Everyplay.SharedInstance.IsRecordingSupported())
-			Everyplay.SharedInstance.PlayLastRecording();
+			GameController.Instance.gameViewController.ShowShareRecordingWindow();
 	}
 
 	void RecordingWasClosed(){
